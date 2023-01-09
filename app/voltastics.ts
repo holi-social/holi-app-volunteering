@@ -24,7 +24,9 @@ const transformOrganizer = (
   }
 };
 
-const transformEngagement = (engagement: ApiSearchEngagement): Engagement => {
+export const transformEngagement = (
+  engagement: ApiSearchEngagement,
+): Engagement => {
   return {
     id: engagement.id,
     title: engagement.title,

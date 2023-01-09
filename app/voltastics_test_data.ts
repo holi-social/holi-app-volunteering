@@ -3,6 +3,7 @@ import {
   ApiSearchEngagementsResponse,
 } from "./api_types.ts";
 import { EngagementsResponse } from "./types.ts";
+import { transformEngagement } from "./voltastics.ts";
 
 export const apiSearchEngagements1: ApiSearchEngagement = {
   id: 92403,
@@ -62,7 +63,10 @@ export const apiSearchEngagementsResponse: ApiSearchEngagementsResponse = {
   entries: [apiSearchEngagements1, apiSearchEngagements2],
 };
 
+const engagement1 = transformEngagement(apiSearchEngagements1);
+const engagement2 = transformEngagement(apiSearchEngagements2);
+
 export const engagementsResponse: EngagementsResponse = {
   totalResults: 1186,
-  engagements: [apiSearchEngagements1, apiSearchEngagements2],
+  data: [engagement1, engagement2],
 };
