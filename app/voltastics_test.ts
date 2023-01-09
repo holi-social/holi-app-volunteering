@@ -11,7 +11,7 @@ import {
 } from "./dev_deps.ts";
 import { processGqlRequest, stubFetch } from "./common_test.ts";
 
-import { Engagement, EngagementsResponse } from "./types.ts";
+import { EngagementsResponse } from "./types.ts";
 import {
   createGraphQLServer,
   GraphQLServer,
@@ -108,7 +108,7 @@ describe("voltastics", () => {
       location: "Munich",
     });
 
-    assertEquals(result, { totalResults: 0, engagements: [] });
+    assertEquals(result, { totalResults: 0, data: [] });
   });
 
   it("correctly parses engagement list", async () => {
