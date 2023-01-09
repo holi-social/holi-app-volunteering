@@ -3,6 +3,7 @@ import {
   Engagement,
   EngagementsParameters,
   EngagementsResponse,
+  Organizer,
 } from "./types.ts";
 
 import {
@@ -12,18 +13,27 @@ import {
 } from "./api_types.ts";
 import { VoltasticsConfig } from "./server.ts";
 
+const transformOrganizer = (
+  engagement: ApiSearchEngagement,
+): Organizer | undefined => {
+  if (engagement.orga) {
+    return {
+      name: engagement.orga,
+      imageUrl: engagement.imageOrga,
+    };
+  }
+};
+
 const transformEngagement = (engagement: ApiSearchEngagement): Engagement => {
   return {
     id: engagement.id,
     title: engagement.title,
     description: engagement.description,
-    link: engagement.link,
-    image: engagement.image,
+    url: engagement.link,
+    imageUrl: engagement.image,
     source: engagement.source,
-    uses: engagement.uses,
-    hashTags: engagement.hashTags,
-    orga: engagement.orga,
-    imageOrga: engagement.imageOrga,
+    categories: engagement.uses,
+    organizer: transformOrganizer(engagement),
     location: engagement.location,
     latitude: engagement.latitude,
     longitude: engagement.longitude,
@@ -36,12 +46,12 @@ const transformEngagementsResponse = (
   if ("success" in engagementsResponse) {
     return {
       totalResults: 0,
-      engagements: [],
+      data: [],
     };
   }
   return {
     totalResults: engagementsResponse.totalEntries,
-    engagements: engagementsResponse.entries.map(transformEngagement),
+    data: engagementsResponse.entries.map(transformEngagement),
   };
 };
 
@@ -61,7 +71,15 @@ const voltasticsApi = (
 };
 
 const buildVoltasticsEngagementsSearchParams = (
-  { limit = 5, offset = 0, location }: EngagementsParameters,
+  {
+    limit = 5,
+    offset = 0,
+    location,
+    categories,
+    latitude,
+    longitude,
+    radiusKm,
+  }: EngagementsParameters,
 ) => {
   const params = new URLSearchParams();
   params.append("limit", limit.toString());
@@ -70,6 +88,20 @@ const buildVoltasticsEngagementsSearchParams = (
   if (location) {
     params.append("city", location);
   }
+
+  if (latitude) {
+    params.append("lat", latitude.toString());
+  }
+
+  if (longitude) {
+    params.append("lon", longitude.toString());
+  }
+
+  if (radiusKm) {
+    params.append("radius", radiusKm.toString());
+  }
+
+  categories?.forEach((category) => params.append("use", category));
 
   return params;
 };

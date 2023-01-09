@@ -3,17 +3,20 @@ import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
 import { fetchEngagements } from "./voltastics.ts";
 
 const typeDefs = `
+    type Organizer {
+      name: String
+      imageUrl: String
+    }
+
     type Engagement {
       id: Int
       title: String
       description: String
-      link: String
-      image: String
+      url: String
+      imageUrl: String
       source: String
-      uses: [String]!
-      hashTags: [String]!
-      orga: String
-      imageOrga:String
+      categories: [String]!
+      organizer: Organizer
       location: String
       latitude: Int
       longitude: Int
@@ -21,13 +24,13 @@ const typeDefs = `
 
     type EngagementsResponse {
       totalResults: Int!
-      engagements: [Engagement]!
+      data: [Engagement]!
     }
 
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
-        engagements(offset: Int!, limit: Int!, location: String!): EngagementsResponse!
-        engagement(id: Int!): Engagement!
+        engagements(offset: Int!, limit: Int!, location: String!, categories: [String], longitude: Int, latitude: Int, radiusKm: Int): EngagementsResponse!
+        categories: [String!]!
     }
 `;
 

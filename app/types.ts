@@ -1,34 +1,25 @@
-export enum Radius {
-  ONE = 1,
-  FIVE = 5,
-  TEN = 10,
-  TWENTY = 20,
-}
-
 export type Organizer = {
   name?: string;
-  image?: string;
+  imageUrl?: string;
 };
 
 export type Engagement = {
   id: number;
   title: string;
   description: string;
-  link: string;
-  image?: string;
+  url: string;
+  imageUrl?: string;
   source: string;
-  uses: string[]; //TODO: rename it to categories
-  hashTags: string[]; // TODO: clarify whether this property should be removed
-  orga?: string; //TODO: use it as a name property for organizer
-  imageOrga?: string; //TODO: use it as a image property for organizer
+  categories: string[];
+  organizer?: Organizer;
   location?: string;
-  latitude?: number | null; // TODO: clarify whether this property should be removed
-  longitude?: number | null; // TODO: clarify whether this property should be removed
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type EngagementsResponse = {
   totalResults: number;
-  engagements: Engagement[];
+  data: Engagement[];
 };
 
 export type EngagementsParameters = {
@@ -36,7 +27,7 @@ export type EngagementsParameters = {
   offset: number;
   latitude?: number;
   longitude?: number;
-  radius?: Radius;
-  location: string;
+  radiusKm?: number;
+  location?: string;
   categories?: string[];
 };
