@@ -4,6 +4,8 @@ import {
   EngagementsParameters,
   EngagementsResponse,
   Organizer,
+  TrackEngagementViewParameters,
+  TrackEngagementViewResponse,
 } from "./types.ts";
 
 import {
@@ -28,7 +30,7 @@ export const transformEngagement = (
   engagement: ApiSearchEngagement,
 ): Engagement => {
   return {
-    id: engagement.id,
+    id: engagement.id.toString(),
     title: engagement.title,
     description: engagement.description,
     url: engagement.link,
@@ -57,7 +59,7 @@ const transformEngagementsResponse = (
   };
 };
 
-const voltasticsApi = (
+const fetchFromVoltasticsApi = (
   config: VoltasticsConfig,
   route: ApiRoutes,
   params: URLSearchParams,
@@ -72,17 +74,15 @@ const voltasticsApi = (
   });
 };
 
-const buildVoltasticsEngagementsSearchParams = (
-  {
-    limit = 5,
-    offset = 0,
-    location,
-    categories,
-    latitude,
-    longitude,
-    radiusKm,
-  }: EngagementsParameters,
-) => {
+const buildVoltasticsEngagementsSearchParams = ({
+  limit = 5,
+  offset = 0,
+  location,
+  categories,
+  latitude,
+  longitude,
+  radiusKm,
+}: EngagementsParameters) => {
   const params = new URLSearchParams();
   params.append("limit", limit.toString());
   params.append("offset", offset.toString());
@@ -108,23 +108,45 @@ const buildVoltasticsEngagementsSearchParams = (
   return params;
 };
 
-export const fetchEngagements = (voltasticsConfig: VoltasticsConfig) =>
+export const fetchEngagements =
+  (voltasticsConfig: VoltasticsConfig) =>
+  (params: EngagementsParameters): Promise<EngagementsResponse> => {
+    const searchParams = buildVoltasticsEngagementsSearchParams(params);
+    const start = Date.now();
+    log.debug(`fetching engagements from ${voltasticsConfig.baseUrl}`);
+    return fetchFromVoltasticsApi(
+      voltasticsConfig,
+      ApiRoutes.SEARCH_ENGAGEMENTS,
+      searchParams,
+    )
+      .then((result) => result.json())
+      .then(transformEngagementsResponse)
+      .then((result) => {
+        const duration = Date.now() - start;
+        log.debug(`fetching engagements took ${duration} ms`);
+        return result;
+      })
+      .catch((e) => {
+        const duration = Date.now() - start;
+        log.error(
+          `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
+        );
+        throw e;
+      });
+  };
+
+export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
 (
-  params: EngagementsParameters,
-): Promise<EngagementsResponse> => {
-  const searchParams = buildVoltasticsEngagementsSearchParams(params);
+  params: TrackEngagementViewParameters,
+): Promise<TrackEngagementViewResponse> => {
+  const searchParams = new URLSearchParams();
+  searchParams.append("id", params.id);
   const start = Date.now();
-  log.debug(`fetching engagements from ${voltasticsConfig.baseUrl}`);
-  return voltasticsApi(
-    voltasticsConfig,
-    ApiRoutes.SEARCH_ENGAGEMENTS,
-    searchParams,
-  )
-    .then((result) => result.json())
-    .then(transformEngagementsResponse)
+  log.debug(`tracking engagement view from ${voltasticsConfig.baseUrl}`);
+  fetchFromVoltasticsApi(voltasticsConfig, ApiRoutes.TRACK_VIEW, searchParams)
     .then((result) => {
       const duration = Date.now() - start;
-      log.debug(`fetching engagements took ${duration} ms`);
+      log.debug(`tracking engagement view took ${duration} ms`);
       return result;
     })
     .catch((e) => {
@@ -134,4 +156,7 @@ export const fetchEngagements = (voltasticsConfig: VoltasticsConfig) =>
       );
       throw e;
     });
+
+  // Return immediately and run Voltastics API call asynchronously
+  return Promise.resolve({ id: params.id });
 };

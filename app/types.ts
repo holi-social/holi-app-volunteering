@@ -4,7 +4,7 @@ export type Organizer = {
 };
 
 export type Engagement = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   url: string;
@@ -30,4 +30,12 @@ export type EngagementsParameters = {
   radiusKm?: number;
   location?: string;
   categories?: string[];
+};
+
+export type TrackEngagementViewParameters = {
+  id: string;
+};
+
+export type TrackEngagementViewResponse = {
+  id: string;
 };
