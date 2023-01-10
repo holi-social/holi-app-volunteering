@@ -1,7 +1,7 @@
 resource "google_service_account" "volunteering_api" {
   project  = data.terraform_remote_state.holi_infra_state.outputs.shared_project_id
   account_id   = "cloudrun-service-volunteering"
-  display_name = "volunteering API service account for Cloud Run"
+  display_name = "Volunteering API service account for Cloud Run"
 }
 
 resource "google_project_iam_member" "volunteering_api" {
