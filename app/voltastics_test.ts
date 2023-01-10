@@ -32,19 +32,20 @@ const emptyResponse = {
 const validResponse = apiSearchEngagementsResponse;
 
 const engagementFragment = `
-  id: Int
-  title: String
-  description: String
-  link: String
-  image: String
-  source: String
-  uses: [String]!
-  hashTags: [String]!
-  orga: String
-  imageOrga:String
-  location: String
-  latitude: Int
-  longitude: Int
+id
+title
+description
+url
+imageUrl
+source
+categories
+organizer {
+  name
+  imageUrl
+}
+location
+latitude
+longitude
 `;
 
 const queryEngagements = async (
@@ -54,9 +55,11 @@ const queryEngagements = async (
     graphQLServer,
     `
       query engagements($limit:Int!, $offset: Int!, $location: String!) {
-        totalResults
-        engagements(limit:$limit, offset: $offset, location: $location) {
-          ${engagementFragment}
+        engagements(limit: $limit, offset: $offset, location: $location) {
+          totalResults
+          data {
+            ${engagementFragment}
+          }
         }
       }`,
     { limit: 10, offset: 20, location: "Hamburg" },

@@ -32,12 +32,12 @@ const serverConfigFromEnv = (): ServerConfig => {
     ),
     voltastics: {
       baseUrl: required(
-        "VOLTASTICS_API_URL",
-        Deno.env.get("VOLTASTICS_API_URL"),
+        "VOLUNTEERING_VOLTASTICS_API_URL",
+        Deno.env.get("VOLUNTEERING_VOLTASTICS_API_URL"),
       ),
       apiToken: required(
-        "VOLTASTICS_API_KEY",
-        Deno.env.get("VOLTASTICS_API_KEY"),
+        "VOLUNTEERING_VOLTASTICS_API_KEY",
+        Deno.env.get("VOLUNTEERING_VOLTASTICS_API_KEY"),
       ),
     },
   };

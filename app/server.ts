@@ -1,6 +1,9 @@
-import { EngagementsParameters } from "./types.ts";
+import {
+  EngagementsParameters,
+  TrackEngagementViewParameters,
+} from "./types.ts";
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
-import { fetchEngagements } from "./voltastics.ts";
+import { fetchEngagements, trackEngagementView } from "./voltastics.ts";
 
 const typeDefs = `
     type Organizer {
@@ -8,8 +11,12 @@ const typeDefs = `
       imageUrl: String
     }
 
+    type TrackEngagementViewResponse {
+      id: String
+    }
+
     type Engagement {
-      id: Int
+      id: String
       title: String
       description: String
       url: String
@@ -32,6 +39,10 @@ const typeDefs = `
         engagements(offset: Int!, limit: Int!, location: String!, categories: [String], longitude: Int, latitude: Int, radiusKm: Int): EngagementsResponse!
         categories: [String!]!
     }
+
+    type Mutation {
+        trackEngagementView(id: String!): TrackEngagementViewResponse!
+    }
 `;
 
 const createResolvers = (config: ServerConfig) => ({
@@ -41,6 +52,13 @@ const createResolvers = (config: ServerConfig) => ({
       _parent: any,
       parameters: EngagementsParameters,
     ) => fetchEngagements(config.voltastics)(parameters),
+  },
+  Mutation: {
+    trackEngagementView: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: TrackEngagementViewParameters,
+    ) => trackEngagementView(config.voltastics)(parameters),
   },
 });
 
@@ -59,17 +77,17 @@ export interface ServerConfig {
   voltastics: VoltasticsConfig;
 }
 
-export const createGraphQLServer = (
-  config: ServerConfig,
-): GraphQLServer => {
-  const plugins = (config.cacheEnabled || DEFAULT_CACHE_ENABLED)
-    ? [useResponseCache({
-      session: () => null, // global cache, shared by all users
-      ttlPerSchemaCoordinate: {
-        "Query.engagements": config.cacheTtlMsVoltastics ||
-          DEFAULT_CACHE_TTL_MS_VOLTASTICS,
-      },
-    })]
+export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
+  const plugins = config.cacheEnabled || DEFAULT_CACHE_ENABLED
+    ? [
+      useResponseCache({
+        session: () => null, // global cache, shared by all users
+        ttlPerSchemaCoordinate: {
+          "Query.engagements": config.cacheTtlMsVoltastics ||
+            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+        },
+      }),
+    ]
     : [];
   const resolvers = createResolvers(config);
   return createYoga({
@@ -82,9 +100,7 @@ export const createGraphQLServer = (
 // deno-lint-ignore no-explicit-any
 export type GraphQLServer = any;
 
-export const startServer = (
-  config: ServerConfig,
-): Promise<void> => {
+export const startServer = (config: ServerConfig): Promise<void> => {
   const graphQLServer: GraphQLServer = createGraphQLServer(config);
   return serve(graphQLServer.handleRequest, {
     port: config.port || DEFAULT_PORT,
