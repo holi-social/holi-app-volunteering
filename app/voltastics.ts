@@ -1,6 +1,8 @@
 import { log } from "./deps.ts";
 import {
   Engagement,
+  EngagementParameters,
+  EngagementResponse,
   EngagementsParameters,
   EngagementsResponse,
   Organizer,
@@ -10,6 +12,7 @@ import {
 
 import {
   ApiDefaults,
+  ApiEngagementResponse,
   ApiRoutes,
   ApiSearchEngagement,
   ApiSearchEngagementsResponse,
@@ -43,6 +46,15 @@ export const transformEngagement = (
     latitude: engagement.latitude,
     longitude: engagement.longitude,
   };
+};
+
+const transformEngagementResponse = (
+  engagementResponse: ApiEngagementResponse,
+): EngagementResponse => {
+  if ("success" in engagementResponse) {
+    return null;
+  }
+  return transformEngagement(engagementResponse);
 };
 
 const transformEngagementsResponse = (
@@ -158,3 +170,32 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
   // Return immediately and run Voltastics API call asynchronously
   return Promise.resolve({ id: params.id });
 };
+
+export const fetchEngagement =
+  (voltasticsConfig: VoltasticsConfig) =>
+  ({ id }: EngagementParameters): Promise<EngagementResponse> => {
+    const searchParams = new URLSearchParams();
+    searchParams.append("id", id);
+
+    const start = Date.now();
+    log.debug(`fetching engagement ${id} from ${voltasticsConfig.baseUrl}`);
+    return fetchFromVoltasticsApi(
+      voltasticsConfig,
+      ApiRoutes.ENGAGEMENT,
+      searchParams,
+    )
+      .then((result) => result.json())
+      .then(transformEngagementResponse)
+      .then((result) => {
+        const duration = Date.now() - start;
+        log.debug(`fetching engagement ${id} took ${duration} ms`);
+        return result;
+      })
+      .catch((e) => {
+        const duration = Date.now() - start;
+        log.error(
+          `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
+        );
+        throw e;
+      });
+  };

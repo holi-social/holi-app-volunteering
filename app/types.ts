@@ -17,6 +17,8 @@ export type Engagement = {
   longitude?: number | null;
 };
 
+export type EngagementResponse = Engagement | null;
+
 export type EngagementsResponse = {
   totalResults: number;
   data: Engagement[];
@@ -30,6 +32,10 @@ export type EngagementsParameters = {
   radiusKm?: number;
   location?: string;
   categories?: string[];
+};
+
+export type EngagementParameters = {
+  id: string;
 };
 
 export type TrackEngagementViewParameters = {
