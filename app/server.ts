@@ -36,7 +36,7 @@ const typeDefs = `
 
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
-        engagements(offset: Int!, limit: Int!, location: String!, categories: [String], longitude: Int, latitude: Int, radiusKm: Int): EngagementsResponse!
+        engagements(offset: Int!, limit: Int!, location: String, categories: [String], longitude: Int, latitude: Int, radiusKm: Int): EngagementsResponse!
         categories: [String!]!
     }
 

@@ -102,6 +102,22 @@ describe("voltastics", () => {
     });
   });
 
+  it("calls api with default location parameter", async () => {
+    fetchStub = stubFetch(emptyResponse);
+
+    await fetchEngagements(voltasticsConfigMock)({ limit: 10, offset: 20 });
+
+    const expectedUrl = new URL(
+      "https://backend.voltastics.com/api/searchengagement?limit=10&offset=20&city=ALL_CITIES",
+    );
+
+    const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
+
+    assertSpyCall(fetchStub, 0, {
+      args: [expectedUrl, expectedHeaders],
+    });
+  });
+
   it("correctly parses empty response", async () => {
     fetchStub = stubFetch(emptyResponse);
 
