@@ -14,13 +14,16 @@ export type ApiSearchEngagement = {
   longitude?: number | null;
 };
 
-export type ApiSearchEngagementsResponse = {
-  totalEntries: number;
-  limit: number;
-  offset: number;
-  entries: ApiSearchEngagement[];
-} | { success: boolean };
+export type ApiSearchEngagementsResponse =
+  | {
+    totalEntries: number;
+    limit: number;
+    offset: number;
+    entries: ApiSearchEngagement[];
+  }
+  | { success: boolean };
 
 export enum ApiRoutes {
   SEARCH_ENGAGEMENTS = "searchengagement",
+  TRACK_VIEW = "trackview",
 }

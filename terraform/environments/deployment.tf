@@ -47,20 +47,15 @@ resource "google_cloud_run_service" "volunteering_api" {
           value = local.environment
         }
         env {
-          name = "CONTENTFUL_SPACE_ID"
-          value_from {
-            secret_key_ref {
-              key  = "latest"
-              name = "volunteering_CONTENTFUL_SPACE_ID"
-            }
-          }
+          name = "VOLUNTEERING_VOLTASTICS_API_URL"
+          value = "https://backend.voltastics.de/api"
         }
         env {
-          name = "CONTENTFUL_DELIVERY_API_ACCESS_TOKEN"
+          name = "VOLUNTEERING_VOLTASTICS_API_KEY"
           value_from {
             secret_key_ref {
               key  = "latest"
-              name = "volunteering_CONTENTFUL_DELIVERY_API_ACCESS_TOKEN"
+              name = "VOLUNTEERING_VOLTASTICS_API_KEY"
             }
           }
         }
