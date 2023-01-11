@@ -27,3 +27,7 @@ export enum ApiRoutes {
   SEARCH_ENGAGEMENTS = "searchengagement",
   TRACK_VIEW = "trackview",
 }
+
+export enum ApiDefaults {
+  CITY = "ALL_CITIES",
+}
