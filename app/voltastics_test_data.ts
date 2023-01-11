@@ -5,7 +5,7 @@ import {
 import { EngagementsResponse } from "./types.ts";
 import { transformEngagement } from "./voltastics.ts";
 
-export const apiSearchEngagements1: ApiSearchEngagement = {
+export const apiSearchEngagement1: ApiSearchEngagement = {
   id: 92403,
 
   image:
@@ -31,7 +31,7 @@ export const apiSearchEngagements1: ApiSearchEngagement = {
   longitude: null,
 };
 
-export const apiSearchEngagements2: ApiSearchEngagement = {
+export const apiSearchEngagement2: ApiSearchEngagement = {
   id: 75434,
   image:
     "https://backend.voltastics.de/search/image?id=75434-ehrenamt-im-ambulanten-kinderhospizdienst-hhansestrolche",
@@ -60,11 +60,11 @@ export const apiSearchEngagementsResponse: ApiSearchEngagementsResponse = {
   totalEntries: 1186,
   limit: 2,
   offset: 0,
-  entries: [apiSearchEngagements1, apiSearchEngagements2],
+  entries: [apiSearchEngagement1, apiSearchEngagement2],
 };
 
-const engagement1 = transformEngagement(apiSearchEngagements1);
-const engagement2 = transformEngagement(apiSearchEngagements2);
+export const engagement1 = transformEngagement(apiSearchEngagement1);
+export const engagement2 = transformEngagement(apiSearchEngagement2);
 
 export const engagementsResponse: EngagementsResponse = {
   totalResults: 1186,

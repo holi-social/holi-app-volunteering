@@ -11,7 +11,7 @@ import {
 } from "./dev_deps.ts";
 import { processGqlRequest, stubFetch } from "./common_test.ts";
 
-import { EngagementsResponse } from "./types.ts";
+import { Engagement, EngagementsResponse } from "./types.ts";
 import {
   createGraphQLServer,
   GraphQLServer,
@@ -20,16 +20,18 @@ import {
 import setupLogging from "./logging.ts";
 
 import {
+  apiSearchEngagement1,
   apiSearchEngagementsResponse,
+  engagement1,
   engagementsResponse,
 } from "./voltastics_test_data.ts";
-import { fetchEngagements } from "./voltastics.ts";
+import { fetchEngagement, fetchEngagements } from "./voltastics.ts";
 
 const emptyResponse = {
   success: true,
 };
 
-const validResponse = apiSearchEngagementsResponse;
+const validEngagementsResponse = apiSearchEngagementsResponse;
 
 const engagementFragment = `
 id
@@ -68,6 +70,23 @@ const queryEngagements = async (
   return (await promise)?.engagements as EngagementsResponse;
 };
 
+const queryEngagement = async (
+  graphQLServer: GraphQLServer,
+): Promise<Engagement> => {
+  const promise = processGqlRequest(
+    graphQLServer,
+    `
+    query engagement($id: String!) {
+      engagement(id: $id) {
+        ${engagementFragment}
+      }
+    }`,
+    { id: engagement1.id },
+  );
+
+  return (await promise)?.engagement as Engagement;
+};
+
 const voltasticsConfigMock: VoltasticsConfig = {
   baseUrl: "https://backend.voltastics.com/api",
   apiToken: "ABC123",
@@ -82,80 +101,137 @@ describe("voltastics", () => {
     fetchStub?.restore();
   });
 
-  it("calls api with correct parameters", async () => {
-    fetchStub = stubFetch(emptyResponse);
+  describe("querying engagement list", () => {
+    it("calls api with correct parameters", async () => {
+      fetchStub = stubFetch(emptyResponse);
 
-    await fetchEngagements(voltasticsConfigMock)({
-      limit: 10,
-      offset: 20,
-      location: "Hamburg",
+      await fetchEngagements(voltasticsConfigMock)({
+        limit: 10,
+        offset: 20,
+        location: "Hamburg",
+      });
+
+      const expectedUrl = new URL(
+        "https://backend.voltastics.com/api/searchengagement?limit=10&offset=20&city=Hamburg",
+      );
+
+      const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
+
+      assertSpyCall(fetchStub, 0, {
+        args: [expectedUrl, expectedHeaders],
+      });
+    });
+    it("calls api with default location parameter", async () => {
+      fetchStub = stubFetch(emptyResponse);
+
+      await fetchEngagements(voltasticsConfigMock)({ limit: 10, offset: 20 });
+
+      const expectedUrl = new URL(
+        "https://backend.voltastics.com/api/searchengagement?limit=10&offset=20&city=ALL_CITIES",
+      );
+
+      const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
+
+      assertSpyCall(fetchStub, 0, {
+        args: [expectedUrl, expectedHeaders],
+      });
     });
 
-    const expectedUrl = new URL(
-      "https://backend.voltastics.com/api/searchengagement?limit=10&offset=20&city=Hamburg",
-    );
+    it("correctly parses empty response", async () => {
+      fetchStub = stubFetch(emptyResponse);
 
-    const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
-
-    assertSpyCall(fetchStub, 0, {
-      args: [expectedUrl, expectedHeaders],
-    });
-  });
-
-  it("calls api with default location parameter", async () => {
-    fetchStub = stubFetch(emptyResponse);
-
-    await fetchEngagements(voltasticsConfigMock)({ limit: 10, offset: 20 });
-
-    const expectedUrl = new URL(
-      "https://backend.voltastics.com/api/searchengagement?limit=10&offset=20&city=ALL_CITIES",
-    );
-
-    const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
-
-    assertSpyCall(fetchStub, 0, {
-      args: [expectedUrl, expectedHeaders],
-    });
-  });
-
-  it("correctly parses empty response", async () => {
-    fetchStub = stubFetch(emptyResponse);
-
-    const result = await fetchEngagements(voltasticsConfigMock)({
-      limit: 0,
-      offset: 0,
-      location: "Munich",
-    });
-
-    assertEquals(result, { totalResults: 0, data: [] });
-  });
-
-  it("correctly parses engagement list", async () => {
-    fetchStub = stubFetch(validResponse);
-
-    const graphQLServer = createGraphQLServer({
-      cacheEnabled: false,
-      voltastics: voltasticsConfigMock,
-    });
-
-    const result = await queryEngagements(graphQLServer);
-
-    assertEquals(result, engagementsResponse);
-  });
-
-  it("throws error for invalid engagements response", async () => {
-    fetchStub = stub(
-      globalThis,
-      "fetch",
-      returnsNext([Promise.resolve(new Response("foobar"))]),
-    );
-
-    await assertRejects(() =>
-      fetchEngagements(voltasticsConfigMock)({
+      const result = await fetchEngagements(voltasticsConfigMock)({
         limit: 0,
         offset: 0,
-        location: "Hamburg",
-      })
-    );
+        location: "Munich",
+      });
+
+      assertEquals(result, { totalResults: 0, data: [] });
+    });
+
+    it("correctly parses engagement list", async () => {
+      fetchStub = stubFetch(validEngagementsResponse);
+
+      const graphQLServer = createGraphQLServer({
+        cacheEnabled: false,
+        voltastics: voltasticsConfigMock,
+      });
+
+      const result = await queryEngagements(graphQLServer);
+
+      assertEquals(result, engagementsResponse);
+    });
+
+    it("throws error for invalid engagements response", async () => {
+      fetchStub = stub(
+        globalThis,
+        "fetch",
+        returnsNext([Promise.resolve(new Response("foobar"))]),
+      );
+
+      await assertRejects(() =>
+        fetchEngagements(voltasticsConfigMock)({
+          limit: 0,
+          offset: 0,
+          location: "Hamburg",
+        })
+      );
+    });
+  });
+
+  describe("querying engagement by id", () => {
+    it("calls api with correct parameters", async () => {
+      fetchStub = stubFetch(apiSearchEngagement1);
+
+      await fetchEngagement(voltasticsConfigMock)({
+        id: apiSearchEngagement1.id.toString(),
+      });
+
+      const expectedUrl = new URL(
+        "https://backend.voltastics.com/api/engagement?id=92403",
+      );
+      const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
+
+      assertSpyCall(fetchStub, 0, {
+        args: [expectedUrl, expectedHeaders],
+      });
+    });
+
+    it("correctly parses empty response", async () => {
+      fetchStub = stubFetch(emptyResponse);
+
+      const result = await fetchEngagement(voltasticsConfigMock)({
+        id: "",
+      });
+
+      assertEquals(result, null);
+    });
+
+    it("correctly parses engagement", async () => {
+      fetchStub = stubFetch(apiSearchEngagement1);
+
+      const graphQLServer = createGraphQLServer({
+        cacheEnabled: false,
+        voltastics: voltasticsConfigMock,
+      });
+
+      const result = await queryEngagement(graphQLServer);
+
+      assertEquals(result, engagement1);
+    });
+
+    it("throws error for invalid engagement response", async () => {
+      fetchStub = stub(
+        globalThis,
+        "fetch",
+        returnsNext([Promise.resolve(new Response("foobar"))]),
+      );
+
+      await assertRejects(() =>
+        fetchEngagement(voltasticsConfigMock)({
+          id: "92403",
+        })
+      );
+    });
   });
 });

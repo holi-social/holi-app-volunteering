@@ -1,9 +1,14 @@
 import {
+  EngagementParameters,
   EngagementsParameters,
   TrackEngagementViewParameters,
 } from "./types.ts";
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
-import { fetchEngagements, trackEngagementView } from "./voltastics.ts";
+import {
+  fetchEngagement,
+  fetchEngagements,
+  trackEngagementView,
+} from "./voltastics.ts";
 
 const typeDefs = `
     type Organizer {
@@ -36,7 +41,8 @@ const typeDefs = `
 
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
-        engagements(offset: Int!, limit: Int!, location: String, categories: [String], longitude: Float, latitude: Float, radiusKm: Int): EngagementsResponse!
+        engagements(offset: Int!, limit: Int!, location: String, categories: [String], longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse!
+        engagement(id: String!): Engagement
         categories: [String!]!
     }
 
@@ -52,6 +58,11 @@ const createResolvers = (config: ServerConfig) => ({
       _parent: any,
       parameters: EngagementsParameters,
     ) => fetchEngagements(config.voltastics)(parameters),
+    engagement: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: EngagementParameters,
+    ) => fetchEngagement(config.voltastics)(parameters),
   },
   Mutation: {
     trackEngagementView: (
@@ -84,6 +95,8 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
         session: () => null, // global cache, shared by all users
         ttlPerSchemaCoordinate: {
           "Query.engagements": config.cacheTtlMsVoltastics ||
+            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+          "Query.engagement": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
         },
       }),
