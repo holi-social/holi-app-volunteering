@@ -9,6 +9,7 @@ import {
 } from "./types.ts";
 
 import {
+  ApiDefaults,
   ApiRoutes,
   ApiSearchEngagement,
   ApiSearchEngagementsResponse,
@@ -77,7 +78,7 @@ const fetchFromVoltasticsApi = (
 const buildVoltasticsEngagementsSearchParams = ({
   limit = 5,
   offset = 0,
-  location,
+  location = ApiDefaults.CITY,
   categories,
   latitude,
   longitude,
@@ -86,10 +87,7 @@ const buildVoltasticsEngagementsSearchParams = ({
   const params = new URLSearchParams();
   params.append("limit", limit.toString());
   params.append("offset", offset.toString());
-
-  if (location) {
-    params.append("city", location);
-  }
+  params.append("city", location);
 
   if (latitude) {
     params.append("lat", latitude.toString());
