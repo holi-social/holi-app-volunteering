@@ -11,7 +11,7 @@ import {
 } from "./dev_deps.ts";
 import { processGqlRequest, stubFetch } from "./common_test.ts";
 
-import { Engagement, EngagementsResponse } from "./types.ts";
+import { CitiesResponse, Engagement, EngagementsResponse } from "./types.ts";
 import {
   createGraphQLServer,
   GraphQLServer,
@@ -20,12 +20,18 @@ import {
 import setupLogging from "./logging.ts";
 
 import {
+  apiCitiesResponse,
   apiSearchEngagement1,
   apiSearchEngagementsResponse,
+  cities,
   engagement1,
   engagementsResponse,
 } from "./voltastics_test_data.ts";
-import { fetchEngagement, fetchEngagements } from "./voltastics.ts";
+import {
+  fetchCities,
+  fetchEngagement,
+  fetchEngagements,
+} from "./voltastics.ts";
 
 const emptyResponse = {
   success: true,
@@ -48,6 +54,10 @@ organizer {
 location
 latitude
 longitude
+`;
+
+const cityFragment = `
+name
 `;
 
 const queryEngagements = async (
@@ -85,6 +95,25 @@ const queryEngagement = async (
   );
 
   return (await promise)?.engagement as Engagement;
+};
+
+const queryCities = async (
+  graphQLServer: GraphQLServer,
+): Promise<CitiesResponse> => {
+  const promise = processGqlRequest(
+    graphQLServer,
+    `
+      query cities {
+        cities {
+          data {
+            ${cityFragment}
+          }
+        }
+      }`,
+    {},
+  );
+
+  return (await promise)?.cities as CitiesResponse;
 };
 
 const voltasticsConfigMock: VoltasticsConfig = {
@@ -232,6 +261,31 @@ describe("voltastics", () => {
           id: "92403",
         })
       );
+    });
+  });
+
+  describe("querying cities", () => {
+    it("correctly parses cities list", async () => {
+      fetchStub = stubFetch(apiCitiesResponse);
+
+      const graphQLServer = createGraphQLServer({
+        cacheEnabled: false,
+        voltastics: voltasticsConfigMock,
+      });
+
+      const result = await queryCities(graphQLServer);
+
+      assertEquals(result, cities);
+    });
+
+    it("throws error for invalid cities response", async () => {
+      fetchStub = stub(
+        globalThis,
+        "fetch",
+        returnsNext([Promise.resolve(new Response("foobar"))]),
+      );
+
+      await assertRejects(() => fetchCities(voltasticsConfigMock));
     });
   });
 });

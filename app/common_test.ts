@@ -1,7 +1,7 @@
 import { returnsNext, stub } from "./dev_deps.ts";
 import { GraphQLServer } from "./server.ts";
 
-export type ResponsePayload = Record<string, unknown> | Error;
+export type ResponsePayload = Record<string, unknown> | Array<unknown> | Error;
 
 export const stubFetch = (response: ResponsePayload) => {
   return stub(

@@ -1,5 +1,7 @@
 import { log } from "./deps.ts";
 import {
+  CitiesResponse,
+  City,
   Engagement,
   EngagementParameters,
   EngagementResponse,
@@ -11,6 +13,7 @@ import {
 } from "./types.ts";
 
 import {
+  ApiCitiesResponse,
   ApiDefaults,
   ApiEngagementResponse,
   ApiRoutes,
@@ -72,13 +75,28 @@ const transformEngagementsResponse = (
   };
 };
 
+const transformCity = (city: string): City => {
+  return {
+    name: city,
+  };
+};
+
+const transformCitiesResponse = (
+  citiesResponse: ApiCitiesResponse,
+): CitiesResponse => {
+  return { data: citiesResponse.map(transformCity) };
+};
+
 const fetchFromVoltasticsApi = (
   config: VoltasticsConfig,
   route: ApiRoutes,
-  params: URLSearchParams,
+  params?: URLSearchParams,
 ) => {
   const url = new URL(`${config.baseUrl}/${route}`);
-  url.search = params.toString();
+
+  if (params) {
+    url.search = params.toString();
+  }
 
   return fetch(url, {
     headers: {
@@ -199,3 +217,28 @@ export const fetchEngagement =
         throw e;
       });
   };
+
+export const fetchCities = (
+  voltasticsConfig: VoltasticsConfig,
+): Promise<CitiesResponse> => {
+  const start = Date.now();
+  log.debug(`fetching cities from ${voltasticsConfig.baseUrl}`);
+  return fetchFromVoltasticsApi(
+    voltasticsConfig,
+    ApiRoutes.CITIES,
+  )
+    .then((result) => result.json())
+    .then(transformCitiesResponse)
+    .then((result) => {
+      const duration = Date.now() - start;
+      log.debug(`fetching cities took ${duration} ms`);
+      return result;
+    })
+    .catch((e) => {
+      const duration = Date.now() - start;
+      log.error(
+        `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
+      );
+      throw e;
+    });
+};
