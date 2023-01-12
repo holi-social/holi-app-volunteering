@@ -1,8 +1,9 @@
 import {
+  ApiCitiesResponse,
   ApiSearchEngagement,
   ApiSearchEngagementsResponse,
 } from "./api_types.ts";
-import { EngagementsResponse } from "./types.ts";
+import { CitiesResponse, EngagementsResponse } from "./types.ts";
 import { transformEngagement } from "./voltastics.ts";
 
 export const apiSearchEngagement1: ApiSearchEngagement = {
@@ -69,4 +70,26 @@ export const engagement2 = transformEngagement(apiSearchEngagement2);
 export const engagementsResponse: EngagementsResponse = {
   totalResults: 1186,
   data: [engagement1, engagement2],
+};
+
+export const apiCitiesResponse: ApiCitiesResponse = [
+  "Aalen",
+  "Adelsdorf",
+  "Adenbüttel",
+  "Adendorf",
+  "Aerzen",
+  "Aham",
+  "Ahlen",
+];
+
+export const cities: CitiesResponse = {
+  data: [
+    { name: "Aalen" },
+    { name: "Adelsdorf" },
+    { name: "Adenbüttel" },
+    { name: "Adendorf" },
+    { name: "Aerzen" },
+    { name: "Aham" },
+    { name: "Ahlen" },
+  ],
 };
