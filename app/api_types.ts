@@ -25,10 +25,13 @@ export type ApiSearchEngagementsResponse =
   }
   | { success: boolean };
 
+export type ApiCitiesResponse = string[];
+
 export enum ApiRoutes {
   SEARCH_ENGAGEMENTS = "searchengagement",
   TRACK_VIEW = "trackview",
   ENGAGEMENT = "engagement",
+  CITIES = "cities",
 }
 
 export enum ApiDefaults {

@@ -5,6 +5,7 @@ import {
 } from "./types.ts";
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
 import {
+  fetchCities,
   fetchEngagement,
   fetchEngagements,
   trackEngagementView,
@@ -33,7 +34,14 @@ const typeDefs = `
       latitude: Float
       longitude: Float
     }
+    
+    type City {
+      name: String!
+    }
 
+    type CitiesResponse {
+      data: [City]!
+    }
     type EngagementsResponse {
       totalResults: Int!
       data: [Engagement]!
@@ -44,6 +52,7 @@ const typeDefs = `
         engagements(offset: Int!, limit: Int!, location: String, categories: [String], longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse!
         engagement(id: String!): Engagement
         categories: [String!]!
+        cities: CitiesResponse!
     }
 
     type Mutation {
@@ -63,6 +72,10 @@ const createResolvers = (config: ServerConfig) => ({
       _parent: any,
       parameters: EngagementParameters,
     ) => fetchEngagement(config.voltastics)(parameters),
+    cities: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+    ) => fetchCities(config.voltastics),
   },
   Mutation: {
     trackEngagementView: (
@@ -97,6 +110,8 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
           "Query.engagements": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
           "Query.engagement": config.cacheTtlMsVoltastics ||
+            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+          "Query.cities": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
         },
       }),
