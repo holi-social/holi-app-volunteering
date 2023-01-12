@@ -17,6 +17,10 @@ export type Engagement = {
   longitude?: number | null;
 };
 
+export type City = {
+  name: string;
+};
+
 export type EngagementResponse = Engagement | null;
 
 export type EngagementsResponse = {
@@ -33,6 +37,8 @@ export type EngagementsParameters = {
   location?: string;
   categories?: string[];
 };
+
+export type CitiesResponse = { data: City[] };
 
 export type EngagementParameters = {
   id: string;
