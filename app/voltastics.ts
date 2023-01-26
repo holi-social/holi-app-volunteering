@@ -136,12 +136,29 @@ const buildVoltasticsEngagementsSearchParams = ({
   return params;
 };
 
+const logName = "holi-app-volunteering";
+const resource = {
+  type: "cloud_run_revision",
+  labels: {
+    projectId: "holi-shared",
+  },
+};
+
 export const fetchEngagements =
   (voltasticsConfig: VoltasticsConfig) =>
   (params: EngagementsParameters): Promise<EngagementsResponse> => {
     const searchParams = buildVoltasticsEngagementsSearchParams(params);
     const start = Date.now();
-    log.info(`fetching engagements from ${voltasticsConfig.baseUrl}`);
+    // log.info(`fetching engagements from ${voltasticsConfig.baseUrl}`);
+    console.log(
+      JSON.stringify({
+        logName,
+        timestamp: new Date().toISOString(),
+        severity: "INFO",
+        message: `fetching engagements from ${voltasticsConfig.baseUrl}`,
+        resource,
+      }),
+    );
     return fetchFromVoltasticsApi(
       voltasticsConfig,
       ApiRoutes.SEARCH_ENGAGEMENTS,
