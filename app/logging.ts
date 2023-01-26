@@ -16,10 +16,10 @@ const setupLogging = (environment: string) =>
         formatter: ({ datetime, levelName, msg }) =>
           JSON.stringify({
             logName,
-            resource,
             timestamp: datetime.toISOString(),
             severity: levelName,
-            textPayload: msg,
+            message: msg,
+            resource,
           }),
       }),
     },
