@@ -3,7 +3,13 @@ import {
   EngagementsParameters,
   TrackEngagementViewParameters,
 } from "./types.ts";
-import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
+import {
+  createSchema,
+  createYoga,
+  log,
+  serve,
+  useResponseCache,
+} from "./deps.ts";
 import {
   fetchCities,
   fetchEngagement,
@@ -133,7 +139,7 @@ export const startServer = (config: ServerConfig): Promise<void> => {
   return serve(graphQLServer.handleRequest, {
     port: config.port || DEFAULT_PORT,
     onListen({ port, hostname }) {
-      console.log(
+      log.info(
         `Server started at http://${
           hostname === "0.0.0.0" ? "localhost" : hostname
         }:${port}/graphql`,

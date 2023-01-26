@@ -141,7 +141,7 @@ export const fetchEngagements =
   (params: EngagementsParameters): Promise<EngagementsResponse> => {
     const searchParams = buildVoltasticsEngagementsSearchParams(params);
     const start = Date.now();
-    log.debug(`fetching engagements from ${voltasticsConfig.baseUrl}`);
+    log.info(`fetching engagements from ${voltasticsConfig.baseUrl}`);
     return fetchFromVoltasticsApi(
       voltasticsConfig,
       ApiRoutes.SEARCH_ENGAGEMENTS,
@@ -223,10 +223,7 @@ export const fetchCities = (
 ): Promise<CitiesResponse> => {
   const start = Date.now();
   log.debug(`fetching cities from ${voltasticsConfig.baseUrl}`);
-  return fetchFromVoltasticsApi(
-    voltasticsConfig,
-    ApiRoutes.CITIES,
-  )
+  return fetchFromVoltasticsApi(voltasticsConfig, ApiRoutes.CITIES)
     .then((result) => result.json())
     .then(transformCitiesResponse)
     .then((result) => {
