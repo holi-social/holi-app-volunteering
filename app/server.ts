@@ -3,19 +3,14 @@ import {
   EngagementsParameters,
   TrackEngagementViewParameters,
 } from "./types.ts";
-import {
-  createSchema,
-  createYoga,
-  log,
-  serve,
-  useResponseCache,
-} from "./deps.ts";
+import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
 import {
   fetchCities,
   fetchEngagement,
   fetchEngagements,
   trackEngagementView,
 } from "./voltastics.ts";
+import { logger, LogSeverity } from "./logging.ts";
 
 const typeDefs = `
     type Organizer {
@@ -139,7 +134,8 @@ export const startServer = (config: ServerConfig): Promise<void> => {
   return serve(graphQLServer.handleRequest, {
     port: config.port || DEFAULT_PORT,
     onListen({ port, hostname }) {
-      log.info(
+      logger(
+        LogSeverity.INFO,
         `Server started at http://${
           hostname === "0.0.0.0" ? "localhost" : hostname
         }:${port}/graphql`,
