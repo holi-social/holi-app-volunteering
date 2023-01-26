@@ -141,7 +141,7 @@ export const fetchEngagements =
   (params: EngagementsParameters): Promise<EngagementsResponse> => {
     const searchParams = buildVoltasticsEngagementsSearchParams(params);
     const start = Date.now();
-    logger(
+    logger.log(
       LogSeverity.INFO,
       `fetching engagements from ${voltasticsConfig.baseUrl}`,
     );
@@ -155,14 +155,18 @@ export const fetchEngagements =
       .then(transformEngagementsResponse)
       .then((result) => {
         const duration = Date.now() - start;
-        logger(LogSeverity.INFO, `fetching engagements took ${duration} ms`, {
-          duration,
-        });
+        logger.log(
+          LogSeverity.INFO,
+          `fetching engagements took ${duration} ms`,
+          {
+            duration,
+          },
+        );
         return result;
       })
       .catch((e) => {
         const duration = Date.now() - start;
-        logger(
+        logger.log(
           LogSeverity.ERROR,
           `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
           { duration },
@@ -178,7 +182,7 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
   const searchParams = new URLSearchParams();
   searchParams.append("id", params.id);
   const start = Date.now();
-  logger(
+  logger.log(
     LogSeverity.INFO,
     `tracking engagement view from ${voltasticsConfig.baseUrl}`,
   );
@@ -186,7 +190,7 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
   fetchFromVoltasticsApi(voltasticsConfig, ApiRoutes.TRACK_VIEW, searchParams)
     .then((result) => {
       const duration = Date.now() - start;
-      logger(
+      logger.log(
         LogSeverity.INFO,
         `tracking engagement view took ${duration} ms`,
         { duration },
@@ -195,7 +199,7 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
     })
     .catch((e) => {
       const duration = Date.now() - start;
-      logger(
+      logger.log(
         LogSeverity.ERROR,
         `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
         { duration },
@@ -214,7 +218,7 @@ export const fetchEngagement =
     searchParams.append("id", id);
 
     const start = Date.now();
-    logger(
+    logger.log(
       LogSeverity.INFO,
       `fetching engagement ${id} from ${voltasticsConfig.baseUrl}`,
     );
@@ -227,7 +231,7 @@ export const fetchEngagement =
       .then(transformEngagementResponse)
       .then((result) => {
         const duration = Date.now() - start;
-        logger(
+        logger.log(
           LogSeverity.INFO,
           `fetching engagement ${id} took ${duration} ms`,
           { duration },
@@ -236,7 +240,7 @@ export const fetchEngagement =
       })
       .catch((e) => {
         const duration = Date.now() - start;
-        logger(
+        logger.log(
           LogSeverity.ERROR,
           `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
           { duration },
@@ -249,21 +253,24 @@ export const fetchCities = (
   voltasticsConfig: VoltasticsConfig,
 ): Promise<CitiesResponse> => {
   const start = Date.now();
-  logger(LogSeverity.INFO, `fetching cities from ${voltasticsConfig.baseUrl}`);
+  logger.log(
+    LogSeverity.INFO,
+    `fetching cities from ${voltasticsConfig.baseUrl}`,
+  );
 
   return fetchFromVoltasticsApi(voltasticsConfig, ApiRoutes.CITIES)
     .then((result) => result.json())
     .then(transformCitiesResponse)
     .then((result) => {
       const duration = Date.now() - start;
-      logger(LogSeverity.INFO, `fetching cities took ${duration} ms`, {
+      logger.log(LogSeverity.INFO, `fetching cities took ${duration} ms`, {
         duration,
       });
       return result;
     })
     .catch((e) => {
       const duration = Date.now() - start;
-      logger(
+      logger.log(
         LogSeverity.ERROR,
         `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
         { duration },

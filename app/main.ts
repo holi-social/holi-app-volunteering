@@ -1,3 +1,4 @@
+import { logger } from "./logging.ts";
 import {
   DEFAULT_CACHE_ENABLED,
   DEFAULT_CACHE_TTL_MS_VOLTASTICS,
@@ -5,6 +6,8 @@ import {
   ServerConfig,
   startServer,
 } from "./server.ts";
+
+logger.setUpLogger(Deno.env.get("ENVIRONMENT") || "development");
 
 const serverConfigFromEnv = (): ServerConfig => {
   const required = <T>(name: string, t?: T): T => {

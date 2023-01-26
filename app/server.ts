@@ -134,7 +134,7 @@ export const startServer = (config: ServerConfig): Promise<void> => {
   return serve(graphQLServer.handleRequest, {
     port: config.port || DEFAULT_PORT,
     onListen({ port, hostname }) {
-      logger(
+      logger.log(
         LogSeverity.INFO,
         `Server started at http://${
           hostname === "0.0.0.0" ? "localhost" : hostname
