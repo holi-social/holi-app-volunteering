@@ -27,11 +27,14 @@ export type ApiSearchEngagementsResponse =
 
 export type ApiCitiesResponse = string[];
 
+export type ApiCategoriesResponse = string[];
+
 export enum ApiRoutes {
   SEARCH_ENGAGEMENTS = "searchengagement",
   TRACK_VIEW = "trackview",
   ENGAGEMENT = "engagement",
   CITIES = "cities",
+  USES = "uses",
 }
 
 export enum ApiDefaults {
