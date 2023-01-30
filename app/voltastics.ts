@@ -273,7 +273,7 @@ export const fetchCategories = (
     .then(transformCategoriesResponse)
     .then((result) => {
       const duration = Date.now() - start;
-      logger.info(`fetching categories took ${duration} ms`);
+      logger.debug(`fetching categories took ${duration} ms`);
       return result;
     })
     .catch((e) => {
