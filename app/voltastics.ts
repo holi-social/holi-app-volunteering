@@ -177,9 +177,7 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
   fetchFromVoltasticsApi(voltasticsConfig, ApiRoutes.TRACK_VIEW, searchParams)
     .then((result) => {
       const duration = Date.now() - start;
-      logger.debug(`tracking engagement view took ${duration} ms`, {
-        duration,
-      });
+      logger.debug(`tracking engagement view took ${duration} ms`);
       return result;
     })
     .catch((e) => {
@@ -236,9 +234,7 @@ export const fetchCities = (
     .then(transformCitiesResponse)
     .then((result) => {
       const duration = Date.now() - start;
-      logger.debug(`fetching cities took ${duration} ms`, {
-        duration,
-      });
+      logger.debug(`fetching cities took ${duration} ms`);
       return result;
     })
     .catch((e) => {

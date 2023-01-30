@@ -12,7 +12,7 @@ export enum LogSeverity {
 }
 
 /**
- * The Logger class requires a setUpLogger method to be run duringthe app's initialization in order get the current environment.
+ * The Logger class requires a setUpLogger method to be run during the app's initialization in order get the current environment.
  */
 class Logger {
   environment = "development";
@@ -26,7 +26,7 @@ class Logger {
    * @param message Log message
    * @param options Any extra fields wanted in the structured logging JSON
    *
-   * When in development enviroment, the logs are formatted as simple string for readability purposes.
+   * In a development enviroment, the logs are formatted as simple string for readability purposes.
    * In other environments it should follow Google Cloud's Structured Logging formatting: https://cloud.google.com/logging/docs/structured-logging
    */
   log(severity: LogSeverity, message: string, options = {}) {
