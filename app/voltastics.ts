@@ -152,9 +152,7 @@ export const fetchEngagements =
       .then(transformEngagementsResponse)
       .then((result) => {
         const duration = Date.now() - start;
-        logger.debug(`fetching engagements took ${duration} ms`, {
-          duration,
-        });
+        logger.debug(`fetching engagements took ${duration} ms`);
         return result;
       })
       .catch((e) => {
@@ -214,9 +212,7 @@ export const fetchEngagement =
       .then(transformEngagementResponse)
       .then((result) => {
         const duration = Date.now() - start;
-        logger.debug(`fetching engagement ${id} took ${duration} ms`, {
-          duration,
-        });
+        logger.debug(`fetching engagement ${id} took ${duration} ms`);
         return result;
       })
       .catch((e) => {
