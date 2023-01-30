@@ -3,7 +3,11 @@ import {
   ApiSearchEngagement,
   ApiSearchEngagementsResponse,
 } from "./api_types.ts";
-import { CitiesResponse, EngagementsResponse } from "./types.ts";
+import {
+  CategoriesResponse,
+  CitiesResponse,
+  EngagementsResponse,
+} from "./types.ts";
 import { transformEngagement } from "./voltastics.ts";
 
 export const apiSearchEngagement1: ApiSearchEngagement = {
@@ -91,5 +95,23 @@ export const cities: CitiesResponse = {
     { name: "Aerzen" },
     { name: "Aham" },
     { name: "Ahlen" },
+  ],
+};
+
+export const apiCategoriesResponse: ApiCitiesResponse = [
+  "Einkaufshilfen",
+  "Kinder",
+  "Kommunikation",
+  "Künstlerisches",
+  "Chancengleichheit & Vielfalt",
+];
+
+export const categories: CategoriesResponse = {
+  data: [
+    { name: "Einkaufshilfen" },
+    { name: "Kinder" },
+    { name: "Kommunikation" },
+    { name: "Künstlerisches" },
+    { name: "Chancengleichheit & Vielfalt" },
   ],
 };
