@@ -77,6 +77,8 @@ export const engagementsResponse: EngagementsResponse = {
 };
 
 export const apiCitiesResponse: ApiCitiesResponse = [
+  '"/"Köln',
+  "30851",
   "Aalen",
   "Adelsdorf",
   "Adenbüttel",
@@ -84,6 +86,7 @@ export const apiCitiesResponse: ApiCitiesResponse = [
   "Aerzen",
   "Aham",
   "Ahlen",
+  "Altötting",
 ];
 
 export const cities: CitiesResponse = {
@@ -95,6 +98,7 @@ export const cities: CitiesResponse = {
     { name: "Aerzen" },
     { name: "Aham" },
     { name: "Ahlen" },
+    { name: "Altötting" },
   ],
 };
 
