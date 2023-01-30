@@ -24,6 +24,7 @@ import {
 } from "./api_types.ts";
 import { VoltasticsConfig } from "./server.ts";
 import { logger } from "./logging.ts";
+import { isValidCityName } from "./helpers.ts";
 
 const transformOrganizer = (
   engagement: ApiSearchEngagement,
@@ -87,7 +88,7 @@ const transformCity = (city: string): City => {
 const transformCitiesResponse = (
   citiesResponse: ApiCitiesResponse,
 ): CitiesResponse => {
-  return { data: citiesResponse.map(transformCity) };
+  return { data: citiesResponse.filter(isValidCityName).map(transformCity) };
 };
 
 const transformCategory = (category: string): Category => {
