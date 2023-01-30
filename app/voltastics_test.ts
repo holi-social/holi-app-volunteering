@@ -11,7 +11,12 @@ import {
 } from "./dev_deps.ts";
 import { processGqlRequest, stubFetch } from "./common_test.ts";
 
-import { CitiesResponse, Engagement, EngagementsResponse } from "./types.ts";
+import {
+  CategoriesResponse,
+  CitiesResponse,
+  Engagement,
+  EngagementsResponse,
+} from "./types.ts";
 import {
   createGraphQLServer,
   GraphQLServer,
@@ -19,14 +24,17 @@ import {
 } from "./server.ts";
 
 import {
+  apiCategoriesResponse,
   apiCitiesResponse,
   apiSearchEngagement1,
   apiSearchEngagementsResponse,
+  categories,
   cities,
   engagement1,
   engagementsResponse,
 } from "./voltastics_test_data.ts";
 import {
+  fetchCategories,
   fetchCities,
   fetchEngagement,
   fetchEngagements,
@@ -56,6 +64,10 @@ longitude
 `;
 
 const cityFragment = `
+name
+`;
+
+const categoryFragment = `
 name
 `;
 
@@ -113,6 +125,25 @@ const queryCities = async (
   );
 
   return (await promise)?.cities as CitiesResponse;
+};
+
+const queryCategories = async (
+  graphQLServer: GraphQLServer,
+): Promise<CategoriesResponse> => {
+  const promise = processGqlRequest(
+    graphQLServer,
+    `
+      query categories {
+        categories {
+          data {
+            ${categoryFragment}
+          }
+        }
+      }`,
+    {},
+  );
+
+  return (await promise)?.categories as CategoriesResponse;
 };
 
 const voltasticsConfigMock: VoltasticsConfig = {
@@ -283,6 +314,31 @@ describe("voltastics", () => {
       );
 
       await assertRejects(() => fetchCities(voltasticsConfigMock));
+    });
+  });
+
+  describe("querying categorie", () => {
+    it("correctly parses category list", async () => {
+      fetchStub = stubFetch(apiCategoriesResponse);
+
+      const graphQLServer = createGraphQLServer({
+        cacheEnabled: false,
+        voltastics: voltasticsConfigMock,
+      });
+
+      const result = await queryCategories(graphQLServer);
+
+      assertEquals(result, categories);
+    });
+
+    it("throws error for invalid categories response", async () => {
+      fetchStub = stub(
+        globalThis,
+        "fetch",
+        returnsNext([Promise.resolve(new Response("foobar"))]),
+      );
+
+      await assertRejects(() => fetchCategories(voltasticsConfigMock));
     });
   });
 });

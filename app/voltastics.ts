@@ -1,4 +1,6 @@
 import {
+  CategoriesResponse,
+  Category,
   CitiesResponse,
   City,
   Engagement,
@@ -12,6 +14,7 @@ import {
 } from "./types.ts";
 
 import {
+  ApiCategoriesResponse,
   ApiCitiesResponse,
   ApiDefaults,
   ApiEngagementResponse,
@@ -85,6 +88,18 @@ const transformCitiesResponse = (
   citiesResponse: ApiCitiesResponse,
 ): CitiesResponse => {
   return { data: citiesResponse.map(transformCity) };
+};
+
+const transformCategory = (category: string): Category => {
+  return {
+    name: category,
+  };
+};
+
+const transformCategoriesResponse = (
+  categoriesResponse: ApiCategoriesResponse,
+): CategoriesResponse => {
+  return { data: categoriesResponse.filter(String).map(transformCategory) };
 };
 
 const fetchFromVoltasticsApi = (
@@ -242,6 +257,29 @@ export const fetchCities = (
       logger.error(
         `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
         { duration },
+      );
+      throw e;
+    });
+};
+
+export const fetchCategories = (
+  voltasticsConfig: VoltasticsConfig,
+): Promise<CategoriesResponse> => {
+  const start = Date.now();
+  logger.info(`fetching categories from ${voltasticsConfig.baseUrl}`);
+
+  return fetchFromVoltasticsApi(voltasticsConfig, ApiRoutes.USES)
+    .then((result) => result.json())
+    .then(transformCategoriesResponse)
+    .then((result) => {
+      const duration = Date.now() - start;
+      logger.debug(`fetching categories took ${duration} ms`);
+      return result;
+    })
+    .catch((e) => {
+      const duration = Date.now() - start;
+      logger.error(
+        `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
       );
       throw e;
     });

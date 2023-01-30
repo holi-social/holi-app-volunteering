@@ -5,6 +5,7 @@ import {
 } from "./types.ts";
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
 import {
+  fetchCategories,
   fetchCities,
   fetchEngagement,
   fetchEngagements,
@@ -40,9 +41,19 @@ const typeDefs = `
       name: String!
     }
 
+    type Category {
+      name: String!
+    }
+
+
     type CitiesResponse {
       data: [City]!
     }
+
+    type CategoriesResponse {
+      data: [Category!]!
+    }
+
     type EngagementsResponse {
       totalResults: Int!
       data: [Engagement]!
@@ -52,7 +63,7 @@ const typeDefs = `
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
         engagements(offset: Int!, limit: Int!, location: String, categories: [String], longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse!
         engagement(id: String!): Engagement
-        categories: [String!]!
+        categories: CategoriesResponse!
         cities: CitiesResponse!
     }
 
@@ -77,6 +88,10 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
     ) => fetchCities(config.voltastics),
+    categories: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+    ) => fetchCategories(config.voltastics),
   },
   Mutation: {
     trackEngagementView: (
@@ -113,6 +128,8 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
           "Query.engagement": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
           "Query.cities": config.cacheTtlMsVoltastics ||
+            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+          "Query.categories": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
         },
       }),
