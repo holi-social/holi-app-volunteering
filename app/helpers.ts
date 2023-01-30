@@ -1,5 +1,4 @@
-// Temporary solution to filter out numbers and city names that contain special characters
-// TODO: remove it once Voltastics fix their API cities response
-export function isValidCityName(city: string) {
-  return Boolean(city?.match(/^[A-Za-zäöüÄÖÜß()/\s]*$/));
-}
+export const sortCitiesAlphabetically = (a: string, b: string) =>
+  Number(/^\d/.test(a)) - Number(/^\d/.test(b)) ||
+  Number(/^"/.test(a)) - Number(/^"/.test(b)) ||
+  a.localeCompare(b, "de-DE", { numeric: true, sensitivity: "base" });

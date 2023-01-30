@@ -99,6 +99,8 @@ export const cities: CitiesResponse = {
     { name: "Aham" },
     { name: "Ahlen" },
     { name: "Altötting" },
+    { name: '"/"Köln' },
+    { name: "30851" },
   ],
 };
 
