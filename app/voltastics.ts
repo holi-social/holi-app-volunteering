@@ -127,7 +127,7 @@ const buildVoltasticsEngagementsSearchParams = ({
   limit = 5,
   offset = 0,
   location = ApiDefaults.CITY,
-  categories,
+  category,
   latitude,
   longitude,
   radiusKm,
@@ -149,7 +149,9 @@ const buildVoltasticsEngagementsSearchParams = ({
     params.append("radius", radiusKm.toString());
   }
 
-  categories?.forEach((category) => params.append("use", category));
+  if (category) {
+    params.append("use", category);
+  }
 
   return params;
 };
