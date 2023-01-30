@@ -39,7 +39,7 @@ export type EngagementsParameters = {
   longitude?: number;
   radiusKm?: number;
   location?: string;
-  categories?: string[];
+  category?: string;
 };
 
 export type CitiesResponse = { data: City[] };
