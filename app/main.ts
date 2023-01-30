@@ -7,7 +7,7 @@ import {
   startServer,
 } from "./server.ts";
 
-logger.setUpLogger(Deno.env.get("ENVIRONMENT_ID") || "development");
+logger.setUpLogger(Deno.env.get("ENVIRONMENT") || "development");
 
 const serverConfigFromEnv = (): ServerConfig => {
   const required = <T>(name: string, t?: T): T => {

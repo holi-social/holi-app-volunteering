@@ -34,6 +34,7 @@ class Logger {
     const input = this.environment === "development"
       ? `${date} ${severity} ${message}`
       : JSON.stringify({
+        environment: this.environment,
         severity,
         message,
         ...options,
