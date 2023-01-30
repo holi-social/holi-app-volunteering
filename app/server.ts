@@ -10,7 +10,7 @@ import {
   fetchEngagements,
   trackEngagementView,
 } from "./voltastics.ts";
-import { logger, LogSeverity } from "./logging.ts";
+import { logger } from "./logging.ts";
 
 const typeDefs = `
     type Organizer {
@@ -134,8 +134,7 @@ export const startServer = (config: ServerConfig): Promise<void> => {
   return serve(graphQLServer.handleRequest, {
     port: config.port || DEFAULT_PORT,
     onListen({ port, hostname }) {
-      logger.log(
-        LogSeverity.INFO,
+      logger.info(
         `Server started at http://${
           hostname === "0.0.0.0" ? "localhost" : hostname
         }:${port}/graphql`,

@@ -60,6 +60,18 @@ class Logger {
         console.error(input);
     }
   }
+
+  debug(message: string, options = {}) {
+    this.log(LogSeverity.DEBUG, message, options);
+  }
+
+  info(message: string, options = {}) {
+    this.log(LogSeverity.INFO, message, options);
+  }
+
+  error(message: string, options = {}) {
+    this.log(LogSeverity.ERROR, message, options);
+  }
 }
 
 export const logger = new Logger();
