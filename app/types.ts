@@ -21,6 +21,10 @@ export type City = {
   name: string;
 };
 
+export type Category = {
+  name: string;
+};
+
 export type EngagementResponse = Engagement | null;
 
 export type EngagementsResponse = {
@@ -39,6 +43,8 @@ export type EngagementsParameters = {
 };
 
 export type CitiesResponse = { data: City[] };
+
+export type CategoriesResponse = { data: Category[] };
 
 export type EngagementParameters = {
   id: string;
