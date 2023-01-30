@@ -1,4 +1,4 @@
-import setupLogging from "./logging.ts";
+import { logger } from "./logging.ts";
 import {
   DEFAULT_CACHE_ENABLED,
   DEFAULT_CACHE_TTL_MS_VOLTASTICS,
@@ -7,7 +7,7 @@ import {
   startServer,
 } from "./server.ts";
 
-setupLogging(Deno.env.get("ENVIRONMENT") || "development");
+logger.setUpLogger(Deno.env.get("ENVIRONMENT") || "development");
 
 const serverConfigFromEnv = (): ServerConfig => {
   const required = <T>(name: string, t?: T): T => {
@@ -17,8 +17,8 @@ const serverConfigFromEnv = (): ServerConfig => {
       return t!;
     }
   };
-  const asNumber = (str?: string) => str ? Number(str) : undefined;
-  const asBoolean = (str?: string) => str ? Boolean(str) : undefined;
+  const asNumber = (str?: string) => (str ? Number(str) : undefined);
+  const asBoolean = (str?: string) => (str ? Boolean(str) : undefined);
   return {
     port: required("PORT", asNumber(Deno.env.get("PORT")) || DEFAULT_PORT),
     cacheEnabled: required(

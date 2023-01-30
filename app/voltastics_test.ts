@@ -17,7 +17,6 @@ import {
   GraphQLServer,
   VoltasticsConfig,
 } from "./server.ts";
-import setupLogging from "./logging.ts";
 
 import {
   apiCitiesResponse,
@@ -120,8 +119,6 @@ const voltasticsConfigMock: VoltasticsConfig = {
   baseUrl: "https://backend.voltastics.com/api",
   apiToken: "ABC123",
 };
-
-setupLogging("test");
 
 describe("voltastics", () => {
   let fetchStub: Stub;

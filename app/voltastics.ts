@@ -1,4 +1,3 @@
-import { log } from "./deps.ts";
 import {
   CitiesResponse,
   City,
@@ -21,6 +20,7 @@ import {
   ApiSearchEngagementsResponse,
 } from "./api_types.ts";
 import { VoltasticsConfig } from "./server.ts";
+import { logger } from "./logging.ts";
 
 const transformOrganizer = (
   engagement: ApiSearchEngagement,
@@ -136,29 +136,13 @@ const buildVoltasticsEngagementsSearchParams = ({
   return params;
 };
 
-const logName = "holi-app-volunteering";
-const resource = {
-  type: "cloud_run_revision",
-  labels: {
-    projectId: "holi-shared",
-  },
-};
-
 export const fetchEngagements =
   (voltasticsConfig: VoltasticsConfig) =>
   (params: EngagementsParameters): Promise<EngagementsResponse> => {
     const searchParams = buildVoltasticsEngagementsSearchParams(params);
     const start = Date.now();
-    // log.info(`fetching engagements from ${voltasticsConfig.baseUrl}`);
-    console.log(
-      JSON.stringify({
-        logName,
-        timestamp: new Date().toISOString(),
-        severity: "INFO",
-        message: `fetching engagements from ${voltasticsConfig.baseUrl}`,
-        resource,
-      }),
-    );
+    logger.info(`fetching engagements from ${voltasticsConfig.baseUrl}`);
+
     return fetchFromVoltasticsApi(
       voltasticsConfig,
       ApiRoutes.SEARCH_ENGAGEMENTS,
@@ -168,13 +152,14 @@ export const fetchEngagements =
       .then(transformEngagementsResponse)
       .then((result) => {
         const duration = Date.now() - start;
-        log.debug(`fetching engagements took ${duration} ms`);
+        logger.debug(`fetching engagements took ${duration} ms`);
         return result;
       })
       .catch((e) => {
         const duration = Date.now() - start;
-        log.error(
+        logger.error(
           `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
+          { duration },
         );
         throw e;
       });
@@ -187,17 +172,19 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
   const searchParams = new URLSearchParams();
   searchParams.append("id", params.id);
   const start = Date.now();
-  log.debug(`tracking engagement view from ${voltasticsConfig.baseUrl}`);
+  logger.info(`tracking engagement view from ${voltasticsConfig.baseUrl}`);
+
   fetchFromVoltasticsApi(voltasticsConfig, ApiRoutes.TRACK_VIEW, searchParams)
     .then((result) => {
       const duration = Date.now() - start;
-      log.debug(`tracking engagement view took ${duration} ms`);
+      logger.debug(`tracking engagement view took ${duration} ms`);
       return result;
     })
     .catch((e) => {
       const duration = Date.now() - start;
-      log.error(
+      logger.error(
         `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
+        { duration },
       );
       throw e;
     });
@@ -213,7 +200,7 @@ export const fetchEngagement =
     searchParams.append("id", id);
 
     const start = Date.now();
-    log.debug(`fetching engagement ${id} from ${voltasticsConfig.baseUrl}`);
+    logger.info(`fetching engagement ${id} from ${voltasticsConfig.baseUrl}`);
     return fetchFromVoltasticsApi(
       voltasticsConfig,
       ApiRoutes.ENGAGEMENT,
@@ -223,13 +210,14 @@ export const fetchEngagement =
       .then(transformEngagementResponse)
       .then((result) => {
         const duration = Date.now() - start;
-        log.debug(`fetching engagement ${id} took ${duration} ms`);
+        logger.debug(`fetching engagement ${id} took ${duration} ms`);
         return result;
       })
       .catch((e) => {
         const duration = Date.now() - start;
-        log.error(
+        logger.error(
           `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
+          { duration },
         );
         throw e;
       });
@@ -239,19 +227,21 @@ export const fetchCities = (
   voltasticsConfig: VoltasticsConfig,
 ): Promise<CitiesResponse> => {
   const start = Date.now();
-  log.debug(`fetching cities from ${voltasticsConfig.baseUrl}`);
+  logger.info(`fetching cities from ${voltasticsConfig.baseUrl}`);
+
   return fetchFromVoltasticsApi(voltasticsConfig, ApiRoutes.CITIES)
     .then((result) => result.json())
     .then(transformCitiesResponse)
     .then((result) => {
       const duration = Date.now() - start;
-      log.debug(`fetching cities took ${duration} ms`);
+      logger.debug(`fetching cities took ${duration} ms`);
       return result;
     })
     .catch((e) => {
       const duration = Date.now() - start;
-      log.error(
+      logger.error(
         `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
+        { duration },
       );
       throw e;
     });
