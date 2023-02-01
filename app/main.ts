@@ -1,4 +1,4 @@
-import { logger } from "./logging.ts";
+import { logger, LogSeverity } from "./logging.ts";
 import {
   DEFAULT_CACHE_ENABLED,
   DEFAULT_CACHE_TTL_MS_VOLTASTICS,
@@ -7,7 +7,12 @@ import {
   startServer,
 } from "./server.ts";
 
-logger.setUpLogger(Deno.env.get("ENVIRONMENT") || "development");
+const environment = Deno.env.get("ENVIRONMENT") || "development";
+
+logger.setUpLogger(
+  environment,
+  environment === "development" ? LogSeverity.DEFAULT : LogSeverity.INFO,
+);
 
 const serverConfigFromEnv = (): ServerConfig => {
   const required = <T>(name: string, t?: T): T => {
