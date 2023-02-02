@@ -47,6 +47,15 @@ resource "google_cloud_run_service" "volunteering_api" {
           value = local.environment
         }
         env {
+          name  = "CACHE_ENABLED"
+          value = "true"
+        }
+        env {
+          name  = "CACHE_TTL_MS"
+          value = local.environment == "production" ? "86400000" : "60000"
+          # 24 hours for production, otherwise 1 minute
+        }
+        env {
           name = "VOLUNTEERING_VOLTASTICS_API_URL"
           value = "https://backend.voltastics.de/api"
         }
