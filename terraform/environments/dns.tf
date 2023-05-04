@@ -1,6 +1,3 @@
-## these dns changes are done in the infra shared project (https://gitlab.com/holisticfoundation/holi-infra)
-## because the zone web.project-holi.org is managed in that project.
-
 resource "google_dns_record_set" "holi_social_volunteering_api_domain_record_set" {
   project      = data.terraform_remote_state.holi_infra_state.outputs.shared_project_id
   managed_zone = data.terraform_remote_state.holi_volunteering_api_common_state.outputs.dns_volunteering_api_domain_name
