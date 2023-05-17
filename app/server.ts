@@ -29,6 +29,7 @@ const typeDefs = `
       description: String
       url: String
       imageUrl: String
+      imageUrlOriginal: String
       source: String
       categories: [String]!
       organizer: Organizer
@@ -78,12 +79,12 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementsParameters,
-    ) => fetchEngagements(config.voltastics)(parameters),
+    ) => fetchEngagements(config)(parameters),
     engagement: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementParameters,
-    ) => fetchEngagement(config.voltastics)(parameters),
+    ) => fetchEngagement(config)(parameters),
     cities: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
@@ -112,13 +113,14 @@ export interface VoltasticsConfig {
 }
 export interface ServerConfig {
   port?: number; // default: 8004
-  cacheEnabled?: boolean; // default: true
+  cacheEnabled: boolean; // default: true
   cacheTtlMsVoltastics?: number; // default: 60 seconds
   voltastics: VoltasticsConfig;
+  imageProxyBaseUrl: string;
 }
 
 export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
-  const plugins = config.cacheEnabled || DEFAULT_CACHE_ENABLED
+  const plugins = config.cacheEnabled
     ? [
       useResponseCache({
         session: () => null, // global cache, shared by all users
