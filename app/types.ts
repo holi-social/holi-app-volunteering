@@ -8,7 +8,11 @@ export type Engagement = {
   title: string;
   description: string;
   url: string;
+  // HOLI-4384 imageUrl uses imageProxy-prepended URL for fixing old app versions
   imageUrl?: string;
+  // HOLI-4384 imageUrlOriginal allows app/web-side implementation of optimized image size fetching
+  // can be removed once all app versions are updated
+  imageUrlOriginal?: string;
   source: string;
   categories: string[];
   organizer?: Organizer;
