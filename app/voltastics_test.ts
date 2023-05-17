@@ -20,6 +20,7 @@ import {
 import {
   createGraphQLServer,
   GraphQLServer,
+  ServerConfig,
   VoltasticsConfig,
 } from "./server.ts";
 
@@ -52,6 +53,7 @@ title
 description
 url
 imageUrl
+imageUrlOriginal
 source
 categories
 organizer {
@@ -151,6 +153,12 @@ const voltasticsConfigMock: VoltasticsConfig = {
   apiToken: "ABC123",
 };
 
+const serverConfigMock: ServerConfig = {
+  port: 8080,
+  voltastics: voltasticsConfigMock,
+  imageProxyBaseUrl: "https://dev-images.holi.social",
+};
+
 describe("voltastics", () => {
   let fetchStub: Stub;
 
@@ -162,7 +170,7 @@ describe("voltastics", () => {
     it("calls api with correct parameters", async () => {
       fetchStub = stubFetch(emptyResponse);
 
-      await fetchEngagements(voltasticsConfigMock)({
+      await fetchEngagements(serverConfigMock)({
         limit: 10,
         offset: 20,
         location: "Hamburg",
@@ -181,7 +189,7 @@ describe("voltastics", () => {
     it("calls api with default location parameter", async () => {
       fetchStub = stubFetch(emptyResponse);
 
-      await fetchEngagements(voltasticsConfigMock)({ limit: 10, offset: 20 });
+      await fetchEngagements(serverConfigMock)({ limit: 10, offset: 20 });
 
       const expectedUrl = new URL(
         "https://backend.voltastics.com/api/searchengagement?limit=10&offset=20&city=ALL_CITIES",
@@ -197,7 +205,7 @@ describe("voltastics", () => {
     it("correctly parses empty response", async () => {
       fetchStub = stubFetch(emptyResponse);
 
-      const result = await fetchEngagements(voltasticsConfigMock)({
+      const result = await fetchEngagements(serverConfigMock)({
         limit: 0,
         offset: 0,
         location: "Munich",
@@ -212,6 +220,7 @@ describe("voltastics", () => {
       const graphQLServer = createGraphQLServer({
         cacheEnabled: false,
         voltastics: voltasticsConfigMock,
+        imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
       });
 
       const result = await queryEngagements(graphQLServer);
@@ -227,7 +236,7 @@ describe("voltastics", () => {
       );
 
       await assertRejects(() =>
-        fetchEngagements(voltasticsConfigMock)({
+        fetchEngagements(serverConfigMock)({
           limit: 0,
           offset: 0,
           location: "Hamburg",
@@ -240,7 +249,7 @@ describe("voltastics", () => {
     it("calls api with correct parameters", async () => {
       fetchStub = stubFetch(apiSearchEngagement1);
 
-      await fetchEngagement(voltasticsConfigMock)({
+      await fetchEngagement(serverConfigMock)({
         id: apiSearchEngagement1.id.toString(),
       });
 
@@ -257,7 +266,7 @@ describe("voltastics", () => {
     it("correctly parses empty response", async () => {
       fetchStub = stubFetch(emptyResponse);
 
-      const result = await fetchEngagement(voltasticsConfigMock)({
+      const result = await fetchEngagement(serverConfigMock)({
         id: "",
       });
 
@@ -270,6 +279,7 @@ describe("voltastics", () => {
       const graphQLServer = createGraphQLServer({
         cacheEnabled: false,
         voltastics: voltasticsConfigMock,
+        imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
       });
 
       const result = await queryEngagement(graphQLServer);
@@ -285,7 +295,7 @@ describe("voltastics", () => {
       );
 
       await assertRejects(() =>
-        fetchEngagement(voltasticsConfigMock)({
+        fetchEngagement(serverConfigMock)({
           id: "92403",
         })
       );
@@ -299,6 +309,7 @@ describe("voltastics", () => {
       const graphQLServer = createGraphQLServer({
         cacheEnabled: false,
         voltastics: voltasticsConfigMock,
+        imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
       });
 
       const result = await queryCities(graphQLServer);
@@ -324,6 +335,7 @@ describe("voltastics", () => {
       const graphQLServer = createGraphQLServer({
         cacheEnabled: false,
         voltastics: voltasticsConfigMock,
+        imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
       });
 
       const result = await queryCategories(graphQLServer);

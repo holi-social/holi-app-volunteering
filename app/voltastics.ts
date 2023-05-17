@@ -22,7 +22,7 @@ import {
   ApiSearchEngagement,
   ApiSearchEngagementsResponse,
 } from "./api_types.ts";
-import { VoltasticsConfig } from "./server.ts";
+import { ServerConfig, VoltasticsConfig } from "./server.ts";
 import { logger } from "./logging.ts";
 import { sortCitiesAlphabetically } from "./helpers.ts";
 
@@ -37,7 +37,8 @@ const transformOrganizer = (
   }
 };
 
-export const transformEngagement = (
+export const transformEngagement = (imageProxyBaseUrl: string) =>
+(
   engagement: ApiSearchEngagement,
 ): Engagement => {
   return {
@@ -45,7 +46,10 @@ export const transformEngagement = (
     title: engagement.title,
     description: engagement.description,
     url: engagement.link,
-    imageUrl: engagement.image,
+    imageUrl: engagement.image &&
+      `${imageProxyBaseUrl}/crop:0:0/resize:auto:1024/plain/` +
+        encodeURIComponent(engagement.image),
+    imageUrlOriginal: engagement.image,
     source: engagement.source,
     categories: engagement.uses,
     organizer: transformOrganizer(engagement),
@@ -55,16 +59,18 @@ export const transformEngagement = (
   };
 };
 
-const transformEngagementResponse = (
+const transformEngagementResponse = (imageProxyBaseUrl: string) =>
+(
   engagementResponse: ApiEngagementResponse,
 ): EngagementResponse => {
   if ("success" in engagementResponse) {
     return null;
   }
-  return transformEngagement(engagementResponse);
+  return transformEngagement(imageProxyBaseUrl)(engagementResponse);
 };
 
-const transformEngagementsResponse = (
+const transformEngagementsResponse = (imageProxyBaseUrl: string) =>
+(
   engagementsResponse: ApiSearchEngagementsResponse,
 ): EngagementsResponse => {
   if ("success" in engagementsResponse) {
@@ -75,7 +81,9 @@ const transformEngagementsResponse = (
   }
   return {
     totalResults: engagementsResponse.totalEntries,
-    data: engagementsResponse.entries.map(transformEngagement),
+    data: engagementsResponse.entries.map(
+      transformEngagement(imageProxyBaseUrl),
+    ),
   };
 };
 
@@ -157,19 +165,19 @@ const buildVoltasticsEngagementsSearchParams = ({
 };
 
 export const fetchEngagements =
-  (voltasticsConfig: VoltasticsConfig) =>
+  (config: ServerConfig) =>
   (params: EngagementsParameters): Promise<EngagementsResponse> => {
     const searchParams = buildVoltasticsEngagementsSearchParams(params);
     const start = Date.now();
-    logger.info(`fetching engagements from ${voltasticsConfig.baseUrl}`);
+    logger.info(`fetching engagements from ${config.voltastics.baseUrl}`);
 
     return fetchFromVoltasticsApi(
-      voltasticsConfig,
+      config.voltastics,
       ApiRoutes.SEARCH_ENGAGEMENTS,
       searchParams,
     )
       .then((result) => result.json())
-      .then(transformEngagementsResponse)
+      .then(transformEngagementsResponse(config.imageProxyBaseUrl))
       .then((result) => {
         const duration = Date.now() - start;
         logger.debug(`fetching engagements took ${duration} ms`);
@@ -178,7 +186,7 @@ export const fetchEngagements =
       .catch((e) => {
         const duration = Date.now() - start;
         logger.error(
-          `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
+          `Error performing request to ${config.voltastics.baseUrl} after ${duration} ms: ${e.message}`,
           { duration },
         );
         throw e;
@@ -214,20 +222,20 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
 };
 
 export const fetchEngagement =
-  (voltasticsConfig: VoltasticsConfig) =>
+  (config: ServerConfig) =>
   ({ id }: EngagementParameters): Promise<EngagementResponse> => {
     const searchParams = new URLSearchParams();
     searchParams.append("id", id);
 
     const start = Date.now();
-    logger.info(`fetching engagement ${id} from ${voltasticsConfig.baseUrl}`);
+    logger.info(`fetching engagement ${id} from ${config.voltastics.baseUrl}`);
     return fetchFromVoltasticsApi(
-      voltasticsConfig,
+      config.voltastics,
       ApiRoutes.ENGAGEMENT,
       searchParams,
     )
       .then((result) => result.json())
-      .then(transformEngagementResponse)
+      .then(transformEngagementResponse(config.imageProxyBaseUrl))
       .then((result) => {
         const duration = Date.now() - start;
         logger.debug(`fetching engagement ${id} took ${duration} ms`);
@@ -236,7 +244,7 @@ export const fetchEngagement =
       .catch((e) => {
         const duration = Date.now() - start;
         logger.error(
-          `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
+          `Error performing request to ${config.voltastics.baseUrl} after ${duration} ms: ${e.message}`,
           { duration },
         );
         throw e;
