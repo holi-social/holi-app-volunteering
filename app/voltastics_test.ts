@@ -155,6 +155,7 @@ const voltasticsConfigMock: VoltasticsConfig = {
 
 const serverConfigMock: ServerConfig = {
   port: 8080,
+  cacheEnabled: true,
   voltastics: voltasticsConfigMock,
   imageProxyBaseUrl: "https://dev-images.holi.social",
 };
