@@ -68,6 +68,10 @@ resource "google_cloud_run_service" "volunteering_api" {
             }
           }
         }
+        env {
+          name = "IMAGE_PROXY_BASE_URL"
+          value = local.environment == "production" ? "https://images.holi.social" : "https://dev-images.holi.social"
+        }
         # env {
         #   name  = "ENVIRONMENT_ID"
         #   value = local.environment_name
