@@ -38,7 +38,7 @@ resource "google_cloud_run_service" "volunteering_api" {
     spec {
       service_account_name = data.terraform_remote_state.holi_volunteering_api_common_state.outputs.cloud_run_service_account_email
       containers {
-        image = "${data.terraform_remote_state.holi_infra_state.outputs.gcr_location}/holi-volunteering-api:${var.image_tag}"
+        image = "${data.terraform_remote_state.holi_infra_state.outputs.artifact_registry_location}/holi-volunteering-api:${var.image_tag}"
         ports {
           container_port = 8004
         }
@@ -56,7 +56,7 @@ resource "google_cloud_run_service" "volunteering_api" {
           # 24 hours for production, otherwise 1 minute
         }
         env {
-          name = "VOLUNTEERING_VOLTASTICS_API_URL"
+          name  = "VOLUNTEERING_VOLTASTICS_API_URL"
           value = "https://backend.voltastics.de/api"
         }
         env {
@@ -67,6 +67,10 @@ resource "google_cloud_run_service" "volunteering_api" {
               name = "VOLUNTEERING_VOLTASTICS_API_KEY"
             }
           }
+        }
+        env {
+          name = "IMAGE_PROXY_BASE_URL"
+          value = local.environment == "production" ? "https://images.holi.social" : "https://dev-images.holi.social"
         }
         # env {
         #   name  = "ENVIRONMENT_ID"

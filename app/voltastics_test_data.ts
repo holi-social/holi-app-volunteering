@@ -68,8 +68,14 @@ export const apiSearchEngagementsResponse: ApiSearchEngagementsResponse = {
   entries: [apiSearchEngagement1, apiSearchEngagement2],
 };
 
-export const engagement1 = transformEngagement(apiSearchEngagement1);
-export const engagement2 = transformEngagement(apiSearchEngagement2);
+export const imageProxyBaseUrlMock = "https://dev-images.holi.social";
+
+export const engagement1 = transformEngagement(imageProxyBaseUrlMock)(
+  apiSearchEngagement1,
+);
+export const engagement2 = transformEngagement(imageProxyBaseUrlMock)(
+  apiSearchEngagement2,
+);
 
 export const engagementsResponse: EngagementsResponse = {
   totalResults: 1186,
