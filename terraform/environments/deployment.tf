@@ -69,7 +69,7 @@ resource "google_cloud_run_service" "volunteering_api" {
           }
         }
         env {
-          name = "IMAGE_PROXY_BASE_URL"
+          name  = "IMAGE_PROXY_BASE_URL"
           value = local.environment == "production" ? "https://images.holi.social" : "https://dev-images.holi.social"
         }
         # env {
@@ -122,21 +122,6 @@ resource "google_cloud_run_service" "volunteering_api" {
   }
 
   depends_on = [google_project_service.service]
-}
-
-resource "google_cloud_run_domain_mapping" "volunteering_api" {
-  project = google_cloud_run_service.volunteering_api.project
-  # location needs to be the same as the service's
-  location = google_cloud_run_service.volunteering_api.location
-  name     = local.project_holi_dns_name
-
-  metadata {
-    namespace = google_cloud_run_service.volunteering_api.project
-  }
-
-  spec {
-    route_name = google_cloud_run_service.volunteering_api.name
-  }
 }
 
 resource "google_cloud_run_domain_mapping" "holi_social_volunteering_api" {
