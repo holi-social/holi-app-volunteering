@@ -79,7 +79,7 @@ vr install
 
 Deno will compile all TypeScript code to JavaScript and cache the resulting
 files. This will happen automatically when you run the code, but you can also
-trigger this manually by running
+trigger this manually by running:
 
 ```sh
 vr cache
