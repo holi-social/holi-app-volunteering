@@ -59,7 +59,7 @@ See the [deno manual](https://deno.land/manual/tools) for more tools.
 
 All dependencies should be added in `app/deps.ts` (similiar as you would do in a
 Node.js `package.json`) for caching and integrity checks. After adding a
-dependency run
+dependency run:
 
 ```sh
 vr updateDeps
