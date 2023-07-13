@@ -18,6 +18,8 @@ resource "google_project_service" "service" {
   service = each.key
 
   project            = data.terraform_remote_state.holi_infra_state.outputs.shared_project_id
+  # keep this property as false. Having it true caused https://holi.atlassian.net/wiki/spaces/HOLI/pages/348258312/2023-06-27+All+services+down
+  disable_dependent_services = false
   disable_on_destroy = false
 }
 

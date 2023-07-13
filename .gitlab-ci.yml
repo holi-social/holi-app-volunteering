@@ -151,8 +151,18 @@ staging_deploy:
   only:
     - main
 
+staging_trigger_unified-api_redeployment:
+  needs: ['staging_deploy']
+  trigger:
+    project: 'app/holi-unified-api'
+    branch: 'main'
+  only:
+    - main
+
 staging_e2e:
   extends: .e2e
+  # if staging_e2e would actually run tests (other than ensuring SSL works), we'd have to
+  # wait for the unified-api pipeline to finish.
   needs: ['staging_deploy']
   only:
     - main
@@ -169,5 +179,13 @@ production_deploy:
     url: https://production.volunteering.apis.holi.social
   variables:
     ENVIRONMENT_ID: production
+  only:
+    - production
+
+production_trigger_unified-api_redeployment:
+  needs: ['production_deploy']
+  trigger:
+    project: 'app/holi-unified-api'
+    branch: 'production'
   only:
     - production
