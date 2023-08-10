@@ -149,7 +149,7 @@ const queryCategories = async (
 };
 
 const voltasticsConfigMock: VoltasticsConfig = {
-  baseUrl: "https://backend.voltastics.com/api",
+  baseUrl: "https://test.com/api",
   apiToken: "ABC123",
 };
 
@@ -178,7 +178,7 @@ describe("voltastics", () => {
       });
 
       const expectedUrl = new URL(
-        "https://backend.voltastics.com/api/searchengagement?limit=10&offset=20&city=Hamburg",
+        "https://test.com/api/searchengagement?limit=10&offset=20&city=Hamburg",
       );
 
       const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
@@ -193,7 +193,7 @@ describe("voltastics", () => {
       await fetchEngagements(serverConfigMock)({ limit: 10, offset: 20 });
 
       const expectedUrl = new URL(
-        "https://backend.voltastics.com/api/searchengagement?limit=10&offset=20&city=ALL_CITIES",
+        "https://test.com/api/searchengagement?limit=10&offset=20&city=ALL_CITIES",
       );
 
       const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
@@ -255,7 +255,7 @@ describe("voltastics", () => {
       });
 
       const expectedUrl = new URL(
-        "https://backend.voltastics.com/api/engagement?id=92403",
+        "https://test.com/api/engagement?id=92403",
       );
       const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
 
