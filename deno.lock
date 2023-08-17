@@ -320,16 +320,5 @@
     "https://esm.sh/v131/topojson-client@3.1.0/denonext/topojson-client.mjs": "be4dd835dee50439be15521a32978e851181d3a8b8b61b1c040a5981d04dab6f",
     "https://esm.sh/v131/topojson-server@3.0.1/denonext/topojson-server.mjs": "7290cfe0abbf0b77b94224971d136370c25919c3dc6a7b36c49b552e1a4ed473",
     "https://esm.sh/v131/turf-jsts@1.2.3/denonext/turf-jsts.mjs": "2239465c9e5f3efc2d45a3349206ee320f7c54f1e6a85145fee4e91735757995"
-  },
-  "npm": {
-    "specifiers": {
-      "@types/node": "@types/node@18.16.19"
-    },
-    "packages": {
-      "@types/node@18.16.19": {
-        "integrity": "sha512-IXl7o+R9iti9eBW4Wg2hx1xQDig183jj7YLn8F7udNceyfkbn1ZxmzZXuak20gR40D7pIkIY1kYGx5VIGbaHKA==",
-        "dependencies": {}
-      }
-    }
   }
 }
