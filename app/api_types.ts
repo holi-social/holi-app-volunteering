@@ -25,8 +25,6 @@ export type ApiSearchEngagementsResponse =
   }
   | { success: boolean };
 
-export type ApiCitiesResponse = string[];
-
 export type ApiCategoriesResponse = string[];
 
 export enum ApiRoutes {
@@ -39,4 +37,6 @@ export enum ApiRoutes {
 
 export enum ApiDefaults {
   CITY = "ALL_CITIES",
+  MIN_RADIUS = 5,
+  MAX_RADIUS = 50, // The largest radius in kilometers that the Voltastics API is capable of handling.
 }

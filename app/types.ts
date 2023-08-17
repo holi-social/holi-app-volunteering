@@ -21,10 +21,6 @@ export type Engagement = {
   longitude?: number | null;
 };
 
-export type City = {
-  name: string;
-};
-
 export type Category = {
   name: string;
 };
@@ -39,14 +35,9 @@ export type EngagementsResponse = {
 export type EngagementsParameters = {
   limit: number;
   offset: number;
-  latitude?: number;
-  longitude?: number;
-  radiusKm?: number;
-  location?: string;
+  location?: PlaceDetails;
   category?: string;
 };
-
-export type CitiesResponse = { data: City[] };
 
 export type CategoriesResponse = { data: Category[] };
 
@@ -60,4 +51,24 @@ export type TrackEngagementViewParameters = {
 
 export type TrackEngagementViewResponse = {
   id: string;
+};
+
+export type PlaceDetails = {
+  name: string;
+  geolocation: GeolocationGeoJSON;
+};
+
+export type GeolocationGeometry = {
+  type: string;
+  coordinates: number[] | number[][] | number[][][] | number[][][][];
+};
+
+export type Place = {
+  lon: number;
+  lat: number;
+};
+
+export type GeolocationGeoJSON = {
+  properties: Place;
+  geometry: GeolocationGeometry;
 };

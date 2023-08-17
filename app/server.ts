@@ -6,7 +6,6 @@ import {
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
 import {
   fetchCategories,
-  fetchCities,
   fetchEngagement,
   fetchEngagements,
   trackEngagementView,
@@ -38,17 +37,9 @@ const typeDefs = `
       longitude: Float
     }
     
-    type City {
-      name: String!
-    }
 
     type Category {
       name: String!
-    }
-
-
-    type CitiesResponse {
-      data: [City]!
     }
 
     type CategoriesResponse {
@@ -59,13 +50,14 @@ const typeDefs = `
       totalResults: Int!
       data: [Engagement]!
     }
+    
+    scalar GeoJSON
 
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
-        engagements(offset: Int!, limit: Int!, location: String, category: String, longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse!
+        engagements(offset: Int!, limit: Int!, location: GeoJSON, category: String): EngagementsResponse!
         engagement(id: String!): Engagement
         categories: CategoriesResponse!
-        cities: CitiesResponse!
     }
 
     type Mutation {
@@ -85,10 +77,6 @@ const createResolvers = (config: ServerConfig) => ({
       _parent: any,
       parameters: EngagementParameters,
     ) => fetchEngagement(config)(parameters),
-    cities: (
-      // deno-lint-ignore no-explicit-any
-      _parent: any,
-    ) => fetchCities(config.voltastics),
     categories: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
@@ -128,8 +116,6 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
           "Query.engagements": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
           "Query.engagement": config.cacheTtlMsVoltastics ||
-            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
-          "Query.cities": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
           "Query.categories": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
