@@ -12,8 +12,8 @@ variables:
 # job templates
 
 .deploy:
-  image: 
-    name: 'hashicorp/terraform:1.1.9'
+  image:
+    name: "hashicorp/terraform:1.1.9"
     # default entrypoint is terraform command, but we want to run shell scripts
     entrypoint: ["/bin/sh", "-c"]
   variables:
@@ -34,7 +34,7 @@ variables:
   interruptible: false
 
 .e2e:
-  image: 'archlinux:latest'
+  image: "archlinux:latest"
   script:
     - API_DOMAIN=`cat $API_DOMAIN_PATH`
     - echo "e2e tests against $CI_ENVIRONMENT_SLUG environment go here and against $API_DOMAIN"
@@ -47,10 +47,10 @@ variables:
 ## common steps
 
 cache_lint_test:
-  image: 'denoland/deno:alpine-1.28.1'
-  stage: 'test'
+  image: "denoland/deno:alpine-1.28.1"
+  stage: "test"
   script:
-    - deno cache --lock=deno.lock app/deps.ts app/dev_deps.ts
+    - deno cache --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
     - deno fmt --check
     - deno lint
     - deno test
@@ -63,13 +63,13 @@ cache_lint_test:
 # Note that environment variables can be set in several places
 # See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 sast:
-  needs: ['cache_lint_test']
+  needs: ["cache_lint_test"]
   stage: test
 include:
-- template: Security/SAST.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
 
 build_docker:
-  needs: ['cache_lint_test']
+  needs: ["cache_lint_test"]
   image: docker:20.10
   services:
     - docker:20.10-dind
@@ -84,11 +84,11 @@ build_docker:
     - docker push $GCR_IMAGE:$CI_COMMIT_SHA # this is the tag that is used for deployment
     - docker push $GCR_IMAGE:$CI_COMMIT_REF_SLUG # just for easyly knowing which is the last image for a branch
 
-## review environments 
+## review environments
 
 review_deploy:
   extends: .deploy
-  needs: ['build_docker']
+  needs: ["build_docker"]
   environment:
     name: review/$CI_COMMIT_REF_SLUG
     url: https://$CI_ENVIRONMENT_SLUG.volunteering.apis.holi.social
@@ -101,16 +101,16 @@ review_deploy:
 
 review_e2e:
   extends: .e2e
-  needs: ['review_deploy']
+  needs: ["review_deploy"]
   except:
     - main
     - production
     - /^noenv\/.*/
 
 review_destroy:
-  needs: ['review_deploy']
+  needs: ["review_deploy"]
   image:
-    name: 'hashicorp/terraform:1.1.9'
+    name: "hashicorp/terraform:1.1.9"
     # default entrypoint is terraform command, but we want to run shell scripts
     entrypoint: ["/bin/sh", "-c"]
   variables:
@@ -141,7 +141,7 @@ review_destroy:
 
 staging_deploy:
   extends: .deploy
-  needs: ['build_docker']
+  needs: ["build_docker"]
   environment:
     name: staging
     deployment_tier: staging
@@ -152,10 +152,10 @@ staging_deploy:
     - main
 
 staging_trigger_unified-api_redeployment:
-  needs: ['staging_deploy']
+  needs: ["staging_deploy"]
   trigger:
-    project: 'app/holi-unified-api'
-    branch: 'main'
+    project: "app/holi-unified-api"
+    branch: "main"
   only:
     - main
 
@@ -163,7 +163,7 @@ staging_e2e:
   extends: .e2e
   # if staging_e2e would actually run tests (other than ensuring SSL works), we'd have to
   # wait for the unified-api pipeline to finish.
-  needs: ['staging_deploy']
+  needs: ["staging_deploy"]
   only:
     - main
 
@@ -171,7 +171,7 @@ staging_e2e:
 
 production_deploy:
   extends: .deploy
-  needs: ['build_docker']
+  needs: ["build_docker"]
   allow_failure: false
   environment:
     name: production
@@ -183,9 +183,9 @@ production_deploy:
     - production
 
 production_trigger_unified-api_redeployment:
-  needs: ['production_deploy']
+  needs: ["production_deploy"]
   trigger:
-    project: 'app/holi-unified-api'
-    branch: 'production'
+    project: "app/holi-unified-api"
+    branch: "production"
   only:
     - production
