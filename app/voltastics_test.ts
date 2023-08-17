@@ -13,7 +13,6 @@ import { processGqlRequest, stubFetch } from "./common_test.ts";
 
 import {
   CategoriesResponse,
-  CitiesResponse,
   Engagement,
   EngagementsResponse,
 } from "./types.ts";
@@ -26,17 +25,15 @@ import {
 
 import {
   apiCategoriesResponse,
-  apiCitiesResponse,
   apiSearchEngagement1,
   apiSearchEngagementsResponse,
   categories,
-  cities,
   engagement1,
   engagementsResponse,
+  Munich,
 } from "./voltastics_test_data.ts";
 import {
   fetchCategories,
-  fetchCities,
   fetchEngagement,
   fetchEngagements,
 } from "./voltastics.ts";
@@ -65,10 +62,6 @@ latitude
 longitude
 `;
 
-const cityFragment = `
-name
-`;
-
 const categoryFragment = `
 name
 `;
@@ -79,7 +72,7 @@ const queryEngagements = async (
   const promise = processGqlRequest(
     graphQLServer,
     `
-      query engagements($limit:Int!, $offset: Int!, $location: String!) {
+      query engagements($limit:Int!, $offset: Int!, $location: GeoJSON) {
         engagements(limit: $limit, offset: $offset, location: $location) {
           totalResults
           data {
@@ -87,7 +80,7 @@ const queryEngagements = async (
           }
         }
       }`,
-    { limit: 10, offset: 20, location: "Hamburg" },
+    { limit: 10, offset: 20, lat: 48.1371079, lon: 11.5753822, radius: 14 },
   );
 
   return (await promise)?.engagements as EngagementsResponse;
@@ -108,25 +101,6 @@ const queryEngagement = async (
   );
 
   return (await promise)?.engagement as Engagement;
-};
-
-const queryCities = async (
-  graphQLServer: GraphQLServer,
-): Promise<CitiesResponse> => {
-  const promise = processGqlRequest(
-    graphQLServer,
-    `
-      query cities {
-        cities {
-          data {
-            ${cityFragment}
-          }
-        }
-      }`,
-    {},
-  );
-
-  return (await promise)?.cities as CitiesResponse;
 };
 
 const queryCategories = async (
@@ -174,11 +148,11 @@ describe("voltastics", () => {
       await fetchEngagements(serverConfigMock)({
         limit: 10,
         offset: 20,
-        location: "Hamburg",
+        location: Munich,
       });
 
       const expectedUrl = new URL(
-        "https://test.com/api/searchengagement?limit=10&offset=20&city=Hamburg",
+        "https://test.com/api/searchengagement?limit=10&offset=20&lat=48.1371079&lon=11.5753822&radius=14",
       );
 
       const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
@@ -209,7 +183,7 @@ describe("voltastics", () => {
       const result = await fetchEngagements(serverConfigMock)({
         limit: 0,
         offset: 0,
-        location: "Munich",
+        location: Munich,
       });
 
       assertEquals(result, { totalResults: 0, data: [] });
@@ -240,7 +214,7 @@ describe("voltastics", () => {
         fetchEngagements(serverConfigMock)({
           limit: 0,
           offset: 0,
-          location: "Hamburg",
+          location: Munich,
         })
       );
     });
@@ -300,32 +274,6 @@ describe("voltastics", () => {
           id: "92403",
         })
       );
-    });
-  });
-
-  describe("querying cities", () => {
-    it("correctly parses cities list", async () => {
-      fetchStub = stubFetch(apiCitiesResponse);
-
-      const graphQLServer = createGraphQLServer({
-        cacheEnabled: false,
-        voltastics: voltasticsConfigMock,
-        imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
-      });
-
-      const result = await queryCities(graphQLServer);
-
-      assertEquals(result, cities);
-    });
-
-    it("throws error for invalid cities response", async () => {
-      fetchStub = stub(
-        globalThis,
-        "fetch",
-        returnsNext([Promise.resolve(new Response("foobar"))]),
-      );
-
-      await assertRejects(() => fetchCities(voltasticsConfigMock));
     });
   });
 
