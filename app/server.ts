@@ -1,4 +1,5 @@
 import {
+  EngagementOpportunitiesParameters,
   EngagementParameters,
   EngagementsParameters,
   TrackEngagementViewParameters,
@@ -6,7 +7,9 @@ import {
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
 import {
   fetchCategories,
+  fetchCities,
   fetchEngagement,
+  fetchEngagementOpportunities,
   fetchEngagements,
   trackEngagementView,
 } from "./voltastics.ts";
@@ -53,11 +56,22 @@ const typeDefs = `
     
     scalar GeoJSON
 
+    type City {
+      name: String!
+    }
+
+    type CitiesResponse {
+      data: [City]!
+    }
+
+  
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
-        engagements(offset: Int!, limit: Int!, location: GeoJSON, category: String): EngagementsResponse!
+        engagementOpportunities(offset: Int!, limit: Int!, location: GeoJSON, category: String): EngagementsResponse!
         engagement(id: String!): Engagement
         categories: CategoriesResponse!
+        engagements(offset: Int!, limit: Int!, location: String, category: String, longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse! @deprecated(reason: "Use engagementOpportunities instead, as its support will be discontinued after 1.5.1.")
+        cities: CitiesResponse! @deprecated(reason: "It will no longer be supported after 1.5.1.")
     }
 
     type Mutation {
@@ -67,11 +81,11 @@ const typeDefs = `
 
 const createResolvers = (config: ServerConfig) => ({
   Query: {
-    engagements: (
+    engagementOpportunities: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-      parameters: EngagementsParameters,
-    ) => fetchEngagements(config)(parameters),
+      parameters: EngagementOpportunitiesParameters,
+    ) => fetchEngagementOpportunities(config)(parameters),
     engagement: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
@@ -81,6 +95,15 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
     ) => fetchCategories(config.voltastics),
+    engagements: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: EngagementsParameters,
+    ) => fetchEngagements(config)(parameters),
+    cities: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+    ) => fetchCities(config.voltastics),
   },
   Mutation: {
     trackEngagementView: (
@@ -113,11 +136,15 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
       useResponseCache({
         session: () => null, // global cache, shared by all users
         ttlPerSchemaCoordinate: {
-          "Query.engagements": config.cacheTtlMsVoltastics ||
+          "Query.engagementOpportunities": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
           "Query.engagement": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
           "Query.categories": config.cacheTtlMsVoltastics ||
+            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+          "Query.engagements": config.cacheTtlMsVoltastics ||
+            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+          "Query.cities": config.cacheTtlMsVoltastics ||
             DEFAULT_CACHE_TTL_MS_VOLTASTICS,
         },
       }),
