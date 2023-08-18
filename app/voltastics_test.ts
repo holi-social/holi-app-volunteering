@@ -35,7 +35,7 @@ import {
 import {
   fetchCategories,
   fetchEngagement,
-  fetchEngagements,
+  fetchEngagementOpportunities,
 } from "./voltastics.ts";
 
 const emptyResponse = {
@@ -66,14 +66,14 @@ const categoryFragment = `
 name
 `;
 
-const queryEngagements = async (
+const queryEngagementOpportunities = async (
   graphQLServer: GraphQLServer,
 ): Promise<EngagementsResponse> => {
   const promise = processGqlRequest(
     graphQLServer,
     `
-      query engagements($limit:Int!, $offset: Int!, $location: GeoJSON) {
-        engagements(limit: $limit, offset: $offset, location: $location) {
+      query engagementOpportunities($limit:Int!, $offset: Int!, $location: GeoJSON) {
+        engagementOpportunities(limit: $limit, offset: $offset, location: $location) {
           totalResults
           data {
             ${engagementFragment}
@@ -83,7 +83,7 @@ const queryEngagements = async (
     { limit: 10, offset: 20, lat: 48.1371079, lon: 11.5753822, radius: 14 },
   );
 
-  return (await promise)?.engagements as EngagementsResponse;
+  return (await promise)?.engagementOpportunities as EngagementsResponse;
 };
 
 const queryEngagement = async (
@@ -145,7 +145,7 @@ describe("voltastics", () => {
     it("calls api with correct parameters", async () => {
       fetchStub = stubFetch(emptyResponse);
 
-      await fetchEngagements(serverConfigMock)({
+      await fetchEngagementOpportunities(serverConfigMock)({
         limit: 10,
         offset: 20,
         location: Munich,
@@ -164,7 +164,10 @@ describe("voltastics", () => {
     it("calls api with default location parameter", async () => {
       fetchStub = stubFetch(emptyResponse);
 
-      await fetchEngagements(serverConfigMock)({ limit: 10, offset: 20 });
+      await fetchEngagementOpportunities(serverConfigMock)({
+        limit: 10,
+        offset: 20,
+      });
 
       const expectedUrl = new URL(
         "https://test.com/api/searchengagement?limit=10&offset=20&city=ALL_CITIES",
@@ -180,7 +183,7 @@ describe("voltastics", () => {
     it("correctly parses empty response", async () => {
       fetchStub = stubFetch(emptyResponse);
 
-      const result = await fetchEngagements(serverConfigMock)({
+      const result = await fetchEngagementOpportunities(serverConfigMock)({
         limit: 0,
         offset: 0,
         location: Munich,
@@ -198,7 +201,7 @@ describe("voltastics", () => {
         imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
       });
 
-      const result = await queryEngagements(graphQLServer);
+      const result = await queryEngagementOpportunities(graphQLServer);
 
       assertEquals(result, engagementsResponse);
     });
@@ -211,7 +214,7 @@ describe("voltastics", () => {
       );
 
       await assertRejects(() =>
-        fetchEngagements(serverConfigMock)({
+        fetchEngagementOpportunities(serverConfigMock)({
           limit: 0,
           offset: 0,
           location: Munich,
