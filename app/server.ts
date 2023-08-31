@@ -67,10 +67,10 @@ const typeDefs = `
   
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
-        engagementOpportunities(offset: Int!, limit: Int!, location: GeoJSON, category: String): EngagementsResponse!
+        engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse!
         engagement(id: String!): Engagement
         categories: CategoriesResponse!
-        engagements(offset: Int!, limit: Int!, location: String, category: String, longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse! @deprecated(reason: "Use engagementOpportunities instead, as its support will be discontinued after 1.5.1.")
+        engagements(offset: Int! = 0, limit: Int! = 10, location: String, category: String, longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse! @deprecated(reason: "Use engagementOpportunities instead, as its support will be discontinued after 1.5.1.")
         cities: CitiesResponse! @deprecated(reason: "It will no longer be supported after 1.5.1.")
     }
 
