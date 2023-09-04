@@ -23,7 +23,7 @@ const required = <T>(name: string, t?: T, fallback?: T): T => {
 };
 const asNumber = (str?: string) => (str ? Number(str) : undefined);
 const asBoolean = (str?: string) => (str ? /^true$/i.test(str) : undefined);
-
+const fake = asBoolean(Deno.env.get("FAKE")) || false // For local development. If set, the API returns dummy data
 const serverConfigFromEnv = (): ServerConfig => {
   return {
     port: required("PORT", asNumber(Deno.env.get("PORT")) || DEFAULT_PORT),
@@ -41,18 +41,19 @@ const serverConfigFromEnv = (): ServerConfig => {
       baseUrl: required(
         "VOLUNTEERING_VOLTASTICS_API_URL",
         Deno.env.get("VOLUNTEERING_VOLTASTICS_API_URL"),
+        fake ? 'dummy value' : undefined
       ),
       apiToken: required(
         "VOLUNTEERING_VOLTASTICS_API_KEY",
         Deno.env.get("VOLUNTEERING_VOLTASTICS_API_KEY"),
+        fake ? 'dummy value' : undefined
       ),
     },
     imageProxyBaseUrl: Deno.env.get("IMAGE_PROXY_BASE_URL") ||
       (environment === "production"
         ? "https://images.holi.social"
         : "https://dev-images.holi.social"),
-    fake: asBoolean(Deno.env.get("FAKE")) || false, // For local development. If set, the API returns dummy data
-
+    fake,
   };
 };
 
