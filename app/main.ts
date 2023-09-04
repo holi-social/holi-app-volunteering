@@ -15,7 +15,7 @@ logger.setUpLogger(
 );
 
 const required = <T>(name: string, t?: T, fallback?: T): T => {
-  if (t === undefined && fallback === undefined) {
+  if (!t && fallback === undefined) {
     throw Error(`Environment variable "${name}" is required`);
   } else {
     return t !== undefined ? t : fallback!;
@@ -51,6 +51,8 @@ const serverConfigFromEnv = (): ServerConfig => {
       (environment === "production"
         ? "https://images.holi.social"
         : "https://dev-images.holi.social"),
+    fake: asBoolean(Deno.env.get("FAKE")) || false, // For local development. If set, the API returns dummy data
+
   };
 };
 

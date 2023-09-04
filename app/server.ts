@@ -85,16 +85,16 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementOpportunitiesParameters,
-    ) => fetchEngagementOpportunities(config)(parameters),
+    ) => config.fake ? Promise.resolve({totalResults: 0, data: []}) : fetchEngagementOpportunities(config)(parameters),
     engagement: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementParameters,
-    ) => fetchEngagement(config)(parameters),
+    ) => config.fake ? Promise.resolve(null) : fetchEngagement(config)(parameters),
     categories: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-    ) => fetchCategories(config.voltastics),
+    ) => config.fake ? Promise.resolve({data: []}) : fetchCategories(config.voltastics),
     engagements: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
@@ -110,7 +110,7 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: TrackEngagementViewParameters,
-    ) => trackEngagementView(config.voltastics)(parameters),
+    ) => config.fake ? Promise.resolve({id: parameters.id}) : trackEngagementView(config.voltastics)(parameters),
   },
 });
 
@@ -128,6 +128,7 @@ export interface ServerConfig {
   cacheTtlMsVoltastics?: number; // default: 60 seconds
   voltastics: VoltasticsConfig;
   imageProxyBaseUrl: string;
+  fake: boolean; // For local development. If set, the API returns dummy data
 }
 
 export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
@@ -171,6 +172,9 @@ export const startServer = (config: ServerConfig): Promise<void> => {
           hostname === "0.0.0.0" ? "localhost" : hostname
         }:${port}/graphql`,
       );
+      if(config.fake) {
+        logger.info(`Server is serving fake data due to FAKE env var set to true`)
+      }
     },
   });
 };
