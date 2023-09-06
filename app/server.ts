@@ -1,8 +1,13 @@
 import {
+  CategoriesResponse,
+  CitiesResponse,
   EngagementOpportunitiesParameters,
   EngagementParameters,
+  EngagementResponse,
   EngagementsParameters,
+  EngagementsResponse,
   TrackEngagementViewParameters,
+  TrackEngagementViewResponse,
 } from "./types.ts";
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
 import {
@@ -85,7 +90,7 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementOpportunitiesParameters,
-    ) =>
+    ): Promise<EngagementsResponse> =>
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
         : fetchEngagementOpportunities(config)(parameters),
@@ -93,12 +98,12 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementParameters,
-    ) =>
+    ): Promise<EngagementResponse> =>
       config.fake ? Promise.resolve(null) : fetchEngagement(config)(parameters),
     categories: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-    ) =>
+    ): Promise<CategoriesResponse> =>
       config.fake
         ? Promise.resolve({ data: [] })
         : fetchCategories(config.voltastics),
@@ -106,14 +111,14 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementsParameters,
-    ) =>
+    ): Promise<EngagementsResponse> =>
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
         : fetchEngagements(config)(parameters),
     cities: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-    ) =>
+    ): Promise<CitiesResponse> =>
       config.fake
         ? Promise.resolve({ data: [] })
         : fetchCities(config.voltastics),
@@ -123,7 +128,7 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: TrackEngagementViewParameters,
-    ) =>
+    ): Promise<TrackEngagementViewResponse> =>
       config.fake
         ? Promise.resolve({ id: parameters.id })
         : trackEngagementView(config.voltastics)(parameters),
@@ -139,9 +144,9 @@ export interface VoltasticsConfig {
   apiToken: string;
 }
 export interface ServerConfig {
-  port?: number; // default: 8004
+  port: number; // default: 8004
   cacheEnabled: boolean; // default: true
-  cacheTtlMsVoltastics?: number; // default: 60 seconds
+  cacheTtlMsVoltastics: number; // default: 60 seconds
   voltastics: VoltasticsConfig;
   imageProxyBaseUrl: string;
   fake: boolean; // For local development. If set, the API returns dummy data
@@ -153,16 +158,11 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
       useResponseCache({
         session: () => null, // global cache, shared by all users
         ttlPerSchemaCoordinate: {
-          "Query.engagementOpportunities": config.cacheTtlMsVoltastics ||
-            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
-          "Query.engagement": config.cacheTtlMsVoltastics ||
-            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
-          "Query.categories": config.cacheTtlMsVoltastics ||
-            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
-          "Query.engagements": config.cacheTtlMsVoltastics ||
-            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
-          "Query.cities": config.cacheTtlMsVoltastics ||
-            DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+          "Query.engagementOpportunities": config.cacheTtlMsVoltastics,
+          "Query.engagement": config.cacheTtlMsVoltastics,
+          "Query.categories": config.cacheTtlMsVoltastics,
+          "Query.engagements": config.cacheTtlMsVoltastics,
+          "Query.cities": config.cacheTtlMsVoltastics,
         },
       }),
     ]
@@ -181,7 +181,7 @@ export type GraphQLServer = any;
 export const startServer = (config: ServerConfig): Promise<void> => {
   const graphQLServer: GraphQLServer = createGraphQLServer(config);
   return serve(graphQLServer.handleRequest, {
-    port: config.port || DEFAULT_PORT,
+    port: config.port,
     onListen({ port, hostname }) {
       logger.info(
         `Server started at http://${
