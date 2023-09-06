@@ -99,11 +99,11 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementsParameters,
-    ) => fetchEngagements(config)(parameters),
+    ) => config.fake ? Promise.resolve({totalResults: 0, data: []}) : fetchEngagements(config)(parameters),
     cities: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-    ) => fetchCities(config.voltastics),
+    ) => config.fake ? Promise.resolve({data: []}) : fetchCities(config.voltastics),
   },
   Mutation: {
     trackEngagementView: (
