@@ -85,32 +85,48 @@ const createResolvers = (config: ServerConfig) => ({
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementOpportunitiesParameters,
-    ) => config.fake ? Promise.resolve({totalResults: 0, data: []}) : fetchEngagementOpportunities(config)(parameters),
+    ) =>
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : fetchEngagementOpportunities(config)(parameters),
     engagement: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementParameters,
-    ) => config.fake ? Promise.resolve(null) : fetchEngagement(config)(parameters),
+    ) =>
+      config.fake ? Promise.resolve(null) : fetchEngagement(config)(parameters),
     categories: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-    ) => config.fake ? Promise.resolve({data: []}) : fetchCategories(config.voltastics),
+    ) =>
+      config.fake
+        ? Promise.resolve({ data: [] })
+        : fetchCategories(config.voltastics),
     engagements: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementsParameters,
-    ) => config.fake ? Promise.resolve({totalResults: 0, data: []}) : fetchEngagements(config)(parameters),
+    ) =>
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : fetchEngagements(config)(parameters),
     cities: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-    ) => config.fake ? Promise.resolve({data: []}) : fetchCities(config.voltastics),
+    ) =>
+      config.fake
+        ? Promise.resolve({ data: [] })
+        : fetchCities(config.voltastics),
   },
   Mutation: {
     trackEngagementView: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: TrackEngagementViewParameters,
-    ) => config.fake ? Promise.resolve({id: parameters.id}) : trackEngagementView(config.voltastics)(parameters),
+    ) =>
+      config.fake
+        ? Promise.resolve({ id: parameters.id })
+        : trackEngagementView(config.voltastics)(parameters),
   },
 });
 
@@ -172,8 +188,10 @@ export const startServer = (config: ServerConfig): Promise<void> => {
           hostname === "0.0.0.0" ? "localhost" : hostname
         }:${port}/graphql`,
       );
-      if(config.fake) {
-        logger.info(`Server is serving fake data due to FAKE env var set to true`)
+      if (config.fake) {
+        logger.info(
+          `Server is serving fake data due to FAKE env var set to true`,
+        );
       }
     },
   });
