@@ -132,6 +132,8 @@ const serverConfigMock: ServerConfig = {
   cacheEnabled: true,
   voltastics: voltasticsConfigMock,
   imageProxyBaseUrl: "https://dev-images.holi.social",
+  cacheTtlMsVoltastics: 0,
+  fake: false,
 };
 
 describe("voltastics", () => {
@@ -199,6 +201,9 @@ describe("voltastics", () => {
         cacheEnabled: false,
         voltastics: voltasticsConfigMock,
         imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
+        port: 0,
+        cacheTtlMsVoltastics: 0,
+        fake: false,
       });
 
       const result = await queryEngagementOpportunities(graphQLServer);
@@ -258,6 +263,9 @@ describe("voltastics", () => {
         cacheEnabled: false,
         voltastics: voltasticsConfigMock,
         imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
+        port: 0,
+        cacheTtlMsVoltastics: 0,
+        fake: false,
       });
 
       const result = await queryEngagement(graphQLServer);
@@ -288,6 +296,9 @@ describe("voltastics", () => {
         cacheEnabled: false,
         voltastics: voltasticsConfigMock,
         imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
+        port: 0,
+        cacheTtlMsVoltastics: 0,
+        fake: false,
       });
 
       const result = await queryCategories(graphQLServer);
