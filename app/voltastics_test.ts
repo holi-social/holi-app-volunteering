@@ -132,6 +132,17 @@ const serverConfigMock: ServerConfig = {
   cacheEnabled: true,
   voltastics: voltasticsConfigMock,
   imageProxyBaseUrl: "https://dev-images.holi.social",
+  cacheTtlMsVoltastics: 0,
+  fake: false,
+};
+
+const noCacheServerConfig = {
+  cacheEnabled: false,
+  voltastics: voltasticsConfigMock,
+  imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
+  port: 0,
+  cacheTtlMsVoltastics: 0,
+  fake: false,
 };
 
 describe("voltastics", () => {
@@ -195,11 +206,7 @@ describe("voltastics", () => {
     it("correctly parses engagement list", async () => {
       fetchStub = stubFetch(validEngagementsResponse);
 
-      const graphQLServer = createGraphQLServer({
-        cacheEnabled: false,
-        voltastics: voltasticsConfigMock,
-        imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
-      });
+      const graphQLServer = createGraphQLServer(noCacheServerConfig);
 
       const result = await queryEngagementOpportunities(graphQLServer);
 
@@ -254,11 +261,7 @@ describe("voltastics", () => {
     it("correctly parses engagement", async () => {
       fetchStub = stubFetch(apiSearchEngagement1);
 
-      const graphQLServer = createGraphQLServer({
-        cacheEnabled: false,
-        voltastics: voltasticsConfigMock,
-        imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
-      });
+      const graphQLServer = createGraphQLServer(noCacheServerConfig);
 
       const result = await queryEngagement(graphQLServer);
 
@@ -284,11 +287,7 @@ describe("voltastics", () => {
     it("correctly parses category list", async () => {
       fetchStub = stubFetch(apiCategoriesResponse);
 
-      const graphQLServer = createGraphQLServer({
-        cacheEnabled: false,
-        voltastics: voltasticsConfigMock,
-        imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
-      });
+      const graphQLServer = createGraphQLServer(noCacheServerConfig);
 
       const result = await queryCategories(graphQLServer);
 
