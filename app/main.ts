@@ -14,45 +14,54 @@ logger.setUpLogger(
   environment === "development" ? LogSeverity.DEFAULT : LogSeverity.INFO,
 );
 
-const required = <T>(name: string, t?: T, fallback?: T): T => {
-  if (!t && fallback === undefined) {
+const requiredEnv = <T>(
+  name: string,
+  typeFn: (s: string) => T,
+  fallback?: T,
+): T => {
+  const env = Deno.env.get(name);
+  if (env === undefined && fallback === undefined) {
     throw Error(`Environment variable "${name}" is required`);
   } else {
-    return t !== undefined ? t : fallback!;
+    return env !== undefined ? typeFn(env) : fallback!;
   }
 };
-const asNumber = (str?: string) => (str ? Number(str) : undefined);
-const asBoolean = (str?: string) => (str ? /^true$/i.test(str) : undefined);
-const fake = asBoolean(Deno.env.get("FAKE")) || false; // For local development. If set, the API returns dummy data
+
+const asBoolean = (str: string) => /^true$/i.test(str);
+
+const fake = requiredEnv("FAKE", asBoolean, false); // For local development. If set, the API returns dummy data
 const serverConfigFromEnv = (): ServerConfig => {
   return {
-    port: required("PORT", asNumber(Deno.env.get("PORT")) || DEFAULT_PORT),
-    cacheEnabled: required(
+    port: requiredEnv("PORT", Number, DEFAULT_PORT),
+    cacheEnabled: requiredEnv(
       "CACHE_ENABLED",
-      asBoolean(Deno.env.get("CACHE_ENABLED")),
+      asBoolean,
       DEFAULT_CACHE_ENABLED,
     ),
-    cacheTtlMsVoltastics: required(
+    cacheTtlMsVoltastics: requiredEnv(
       "DEFAULT_CACHE_TTL_MS_VOLTASTICS",
-      asNumber(Deno.env.get("DEFAULT_CACHE_TTL_MS_VOLTASTICS")),
+      Number,
       DEFAULT_CACHE_TTL_MS_VOLTASTICS,
     ),
     voltastics: {
-      baseUrl: required(
+      baseUrl: requiredEnv(
         "VOLUNTEERING_VOLTASTICS_API_URL",
-        Deno.env.get("VOLUNTEERING_VOLTASTICS_API_URL"),
+        String,
         fake ? "dummy value" : undefined,
       ),
-      apiToken: required(
+      apiToken: requiredEnv(
         "VOLUNTEERING_VOLTASTICS_API_KEY",
-        Deno.env.get("VOLUNTEERING_VOLTASTICS_API_KEY"),
+        String,
         fake ? "dummy value" : undefined,
       ),
     },
-    imageProxyBaseUrl: Deno.env.get("IMAGE_PROXY_BASE_URL") ||
-      (environment === "production"
+    imageProxyBaseUrl: requiredEnv(
+      "IMAGE_PROXY_BASE_URL",
+      String,
+      environment === "production"
         ? "https://images.holi.social"
-        : "https://dev-images.holi.social"),
+        : "https://dev-images.holi.social",
+    ),
     fake,
   };
 };
