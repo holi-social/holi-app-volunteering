@@ -47,7 +47,7 @@ variables:
 ## common steps
 
 cache_lint_test:
-  image: "denoland/deno:alpine-1.36.1"
+  image: "denoland/deno:alpine-1.37.2"
   stage: "test"
   script:
     - deno cache --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
