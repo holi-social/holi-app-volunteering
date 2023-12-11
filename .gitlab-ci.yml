@@ -20,8 +20,8 @@ variables:
     ENVIRONMENT_ID: $CI_ENVIRONMENT_SLUG
   artifacts:
     paths:
-      - "terraform/environments/scripts/crash.log" # optional, only available in case of a crash/panic
-      - "terraform/environments/scripts/terraform-*.log" # separate log for every step/command
+      - "terraform/environments/crash.log" # optional, only available in case of a crash/panic
+      - "terraform/environments/terraform-*.log" # separate log for every step/command
       - $API_DOMAIN_PATH
     name: "${CI_JOB_NAME}_${CI_JOB_ID}"
     #when: on_failure
