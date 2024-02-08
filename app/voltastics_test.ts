@@ -37,6 +37,7 @@ import {
   fetchEngagement,
   fetchEngagementOpportunities,
 } from "./voltastics.ts";
+import { GraphQLError } from "npm:graphql@16.8.1";
 
 const emptyResponse = {
   success: true,
@@ -279,6 +280,23 @@ describe("voltastics", () => {
         fetchEngagement(serverConfigMock)({
           id: "92403",
         })
+      );
+    });
+
+    it("throws NOT_FOUND error for 404 response", async () => {
+      fetchStub = stub(
+        globalThis,
+        "fetch",
+        returnsNext([Promise.resolve({ status: 404 } as Response)]),
+      );
+
+      await assertRejects(
+        () =>
+          fetchEngagement(serverConfigMock)({
+            id: "92403",
+          }),
+        GraphQLError,
+        "Not found",
       );
     });
   });

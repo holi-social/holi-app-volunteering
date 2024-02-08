@@ -26,6 +26,7 @@ import {
   TrackEngagementViewResponse,
 } from "./types.ts";
 import { calculateRadius } from "./utils.ts";
+import { GraphQLError } from "./deps.ts";
 
 const transformOrganizer = (
   engagement: ApiSearchEngagement,
@@ -221,7 +222,14 @@ export const fetchEngagement =
       ApiRoutes.ENGAGEMENT,
       searchParams,
     )
-      .then((result) => result.json())
+      .then((response) => {
+        if (response.status === 404) {
+          throw new GraphQLError("Not found", {
+            extensions: { "code": "NOT_FOUND" },
+          });
+        }
+        return response.json();
+      })
       .then(transformEngagementResponse(config.imageProxyBaseUrl))
       .then((result) => {
         const duration = Date.now() - start;
@@ -230,6 +238,7 @@ export const fetchEngagement =
       })
       .catch((e) => {
         const duration = Date.now() - start;
+
         logger.error(
           `Error performing request to ${config.voltastics.baseUrl} after ${duration} ms: ${e.message}`,
           { duration },
