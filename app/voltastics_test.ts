@@ -37,7 +37,7 @@ import {
   fetchEngagement,
   fetchEngagementOpportunities,
 } from "./voltastics.ts";
-import { GraphQLError } from "npm:graphql@16.8.1";
+import { GraphQLError } from "./deps.ts";
 
 const emptyResponse = {
   success: true,
