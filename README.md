@@ -29,7 +29,7 @@ The backend for handling Volunteering projects, including a GraphQL API for
 
 ### Setup
 
-Install [`deno`](https://github.com/denoland/deno_install) in version 1.36.1.
+Install [`deno`](https://github.com/denoland/deno_install) in version 1.40.1.
 
 as well as [`Velociraptor`](https://velociraptor.run/docs/installation/).
 
