@@ -4,7 +4,7 @@ default:
     - env
   interruptible: true
   tags:
-    - holi-small # build on smaller machine
+    - 1cpu-4gb # build on smaller machine
 
 variables:
   API_DOMAIN_PATH: "$CI_PROJECT_DIR/api_domain"
