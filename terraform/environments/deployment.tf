@@ -5,7 +5,7 @@
  */
 resource "random_id" "main" {
   byte_length = 2
-  prefix      = "volunteering-${local.environment_name}-"
+  prefix      = "volunteering-api-${local.environment_name}-"
 }
 
 resource "google_sql_database" "database" {
