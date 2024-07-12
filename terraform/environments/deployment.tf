@@ -5,7 +5,13 @@
  */
 resource "random_id" "main" {
   byte_length = 2
-  prefix      = "volunteering-api-${local.environment_name}-"
+  prefix      = "volunteering-${local.environment_name}-"
+}
+
+resource "google_sql_database" "database" {
+  name     = random_id.main.hex
+  project  = data.terraform_remote_state.holi_infra_state.outputs.shared_project_id
+  instance = local.environment_name == "production" ? data.terraform_remote_state.holi_infra_state.outputs.database_name_production : data.terraform_remote_state.holi_infra_state.outputs.database_name_development
 }
 
 resource "google_project_service" "service" {
