@@ -25,11 +25,11 @@ variables:
       - $API_DOMAIN_PATH
     name: "${CI_JOB_NAME}_${CI_JOB_ID}"
     #when: on_failure
-    expire_in: 1 month
+    expire_in: 1 week
   script:
     - export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_CLOUD_SERVICE_ACCOUNT}
     - terraform/environments/scripts/create-or-update-env.sh $ENVIRONMENT_ID $CI_COMMIT_SHA
-    - echo "$(terraform/environments/scripts/get-api-domain.sh)" > $API_DOMAIN_PATH
+    - echo "$(terraform/environments/scripts/get-output.sh api_domain)" > $API_DOMAIN_PATH
   resource_group: $ENVIRONMENT_ID # never execute terraform in parallel on the same environment
   interruptible: false
 

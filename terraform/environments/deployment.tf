@@ -8,6 +8,12 @@ resource "random_id" "main" {
   prefix      = "volunteering-api-${local.environment_name}-"
 }
 
+resource "google_sql_database" "database" {
+  name     = random_id.main.hex
+  project  = data.terraform_remote_state.holi_infra_state.outputs.shared_project_id
+  instance = local.environment_name == "production" ? data.terraform_remote_state.holi_infra_state.outputs.database_name_production : data.terraform_remote_state.holi_infra_state.outputs.database_name_development
+}
+
 resource "google_project_service" "service" {
   for_each = toset([
     "run.googleapis.com",
@@ -32,7 +38,7 @@ variable "image_tag" {
 resource "google_cloud_run_service" "volunteering_api" {
   project  = data.terraform_remote_state.holi_infra_state.outputs.shared_project_id
   name     = random_id.main.hex
-  location = "europe-north1" # finland, low CO2 emissions
+  location = local.default_region # finland, low CO2 emissions
   # https://github.com/hashicorp/terraform-provider-google/issues/5898
   autogenerate_revision_name = true
 
