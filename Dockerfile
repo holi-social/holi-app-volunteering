@@ -1,4 +1,4 @@
-FROM denoland/deno:alpine-1.40.1
+FROM europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:alpine-1.40.1
 
 # The port that your application listens to.
 EXPOSE 8004
