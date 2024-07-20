@@ -47,7 +47,7 @@ variables:
 ## common steps
 
 cache_lint_test:
-  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:alpine-1.40.1'
+  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:alpine-1.45.2'
   stage: "test"
   script:
     - deno cache --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
