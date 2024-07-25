@@ -13,7 +13,7 @@ variables:
 
 .deploy:
   image:
-    name: "hashicorp/terraform:1.6.1"
+    name: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/hashicorp/terraform:1.6.1'
     # default entrypoint is terraform command, but we want to run shell scripts
     entrypoint: ["/bin/sh", "-c"]
   variables:
@@ -34,7 +34,7 @@ variables:
   interruptible: false
 
 .e2e:
-  image: "archlinux:latest"
+  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/archlinux:latest'
   script:
     - API_DOMAIN=`cat $API_DOMAIN_PATH`
     - echo "e2e tests against $CI_ENVIRONMENT_SLUG environment go here and against $API_DOMAIN"
@@ -47,7 +47,7 @@ variables:
 ## common steps
 
 cache_lint_test:
-  image: "denoland/deno:alpine-1.40.1"
+  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:alpine-1.40.1'
   stage: "test"
   script:
     - deno cache --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
@@ -70,14 +70,12 @@ include:
 
 build_docker:
   needs: ["cache_lint_test"]
-  image: docker:20.10
+  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/docker:20.10'
   services:
     - docker:20.10-dind
   variables:
     # this could be fetched via terraform output ("gcr_location" in infra project), but then we would need an extra job for terraform
     GCR_IMAGE: europe-north1-docker.pkg.dev/holi-shared/docker/holi-volunteering-api
-  before_script:
-    - cat $GOOGLE_CLOUD_SERVICE_ACCOUNT | docker login -u _json_key --password-stdin https://europe-north1-docker.pkg.dev
   script:
     - docker pull $GCR_IMAGE || true # Allows us to use --cache-from, we need to tag with latest in the next command for this to work
     - docker build --cache-from $GCR_IMAGE -t $GCR_IMAGE:latest -t $GCR_IMAGE:$CI_COMMIT_SHA -t $GCR_IMAGE:$CI_COMMIT_REF_SLUG .
@@ -110,7 +108,7 @@ review_e2e:
 review_destroy:
   needs: ["review_deploy"]
   image:
-    name: "hashicorp/terraform:1.6.1"
+    name: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/hashicorp/terraform:1.6.1'
     # default entrypoint is terraform command, but we want to run shell scripts
     entrypoint: ["/bin/sh", "-c"]
   variables:
