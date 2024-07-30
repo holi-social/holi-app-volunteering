@@ -28,6 +28,8 @@ import {
 import { calculateRadius } from "./utils.ts";
 import { GraphQLError } from "./deps.ts";
 
+const ERROR_CODE_NOT_FOUND = "NOT_FOUND";
+
 const transformOrganizer = (
   engagement: ApiSearchEngagement,
 ): Organizer | undefined => {
@@ -225,7 +227,7 @@ export const fetchEngagement =
       .then((response) => {
         if (response.status === 404) {
           throw new GraphQLError("Not found", {
-            extensions: { "code": "NOT_FOUND" },
+            extensions: { "code": ERROR_CODE_NOT_FOUND },
           });
         }
         return response.json();
@@ -237,12 +239,14 @@ export const fetchEngagement =
         return result;
       })
       .catch((e) => {
-        const duration = Date.now() - start;
+        if (e.extensions?.code !== ERROR_CODE_NOT_FOUND) {
+          const duration = Date.now() - start;
 
-        logger.error(
-          `Error performing request to ${config.voltastics.baseUrl} after ${duration} ms: ${e.message}`,
-          { duration },
-        );
+          logger.error(
+            `Error performing request to ${config.voltastics.baseUrl} after ${duration} ms: ${e.message}`,
+            { duration },
+          );
+        }
         throw e;
       });
   };
