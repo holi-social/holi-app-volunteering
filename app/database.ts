@@ -1,5 +1,6 @@
 import { Client } from "./deps.ts";
 import { Engagement } from "./types.ts";
+import { logger } from "./logging.ts";
 
 export type DatabaseConfig = {
   hostname: string;
@@ -25,18 +26,21 @@ type DbRet = {
   cosine_similarity: number;
 };
 
+// TODO table (and therefore result) contains both a column 'embedding' and 'embedding_array'. what's the difference?
+
 export class Database {
   private client: Client;
-  private imageProxyBaseUrl: string;
+  private readonly imageProxyBaseUrl: string;
 
   constructor(config: DatabaseConfig, imageProxyBaseUrl: string) {
+    // TODO add a way to keep a connection open and automatically re-connect
     this.client = new Client({
       hostname: config.hostname,
       port: config.port,
       database: config.database,
       user: config.username,
       password: config.password,
-      /*controls: {
+      controls: {
         debug: {
           queries: true,
           notices: true,
@@ -44,7 +48,6 @@ export class Database {
           queryInError: true,
         },
       },
-      */
     });
     this.imageProxyBaseUrl = imageProxyBaseUrl;
   }
@@ -85,27 +88,35 @@ export class Database {
       url: row.link,
       imageUrl: row.image &&
         `${this.imageProxyBaseUrl}/crop:0:0/resize:auto:1024/plain/` +
-          encodeURIComponent(row.image), // ????
-      imageUrlOriginal: row.image, // TODO ????
+          encodeURIComponent(row.image),
+      imageUrlOriginal: row.image,
       source: row.source,
-      categories: JSON.parse(row.uses), // TODO this might fail
-      organizer: row.orga && { name: row.orga, imageUrl: row.imageorga },
+      categories: safeJsonParse(
+        row.uses,
+        `Failed parsing 'categories' for ID ${row.id}`,
+      ),
+      organizer: isNonEmptyString(row.orga)
+        ? {
+          name: row.orga!,
+          imageUrl: isNonEmptyString(row.imageorga) ? row.imageorga : undefined,
+        }
+        : undefined,
       location: row.location,
       latitude: row.latitude,
       longitude: row.longitude,
-    } as Engagement));
+    }));
   }
+}
 
-  // // User vector
-  // const userVector = [1.0, 2.0, 3.0]; // Replace with your actual vector
+function isNonEmptyString(str?: string) {
+  return typeof str === "string" && str.trim().length > 0;
+}
 
-  // // Parameters for similarity search
-  // const similarityThreshold = 0.8;
-  // const numMatches = 5;
-
-  // // Find top matches
-  // await findTopMatches(userVector, similarityThreshold, numMatches);
-
-  // // Close the database connection
-  // await client.end();
+function safeJsonParse(str: string, errMsg: string) {
+  try {
+    return JSON.parse(str);
+  } catch (_e) {
+    logger.warn(errMsg);
+    return undefined;
+  }
 }
