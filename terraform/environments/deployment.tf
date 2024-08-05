@@ -83,6 +83,37 @@ resource "google_cloud_run_service" "volunteering_api" {
           name  = "IMAGE_PROXY_BASE_URL"
           value = local.environment == "production" ? "https://images.holi.social" : "https://dev-images.holi.social"
         }
+
+        env {
+          name  = "DB_HOST"
+          value = local.environment_name == "production" ? data.terraform_remote_state.holi_infra_state.outputs.database_ip_address_production : data.terraform_remote_state.holi_infra_state.outputs.database_ip_address_development
+        }
+        env {
+          name  = "DB_PORT"
+          value = "5432"
+        }
+        env {
+          name  = "DB_NAME"
+          value = local.environment == "production" ? data.terraform_remote_state.holi_volunteering_api_environments_state_production.outputs.database_name : data.terraform_remote_state.holi_volunteering_api_environments_state_development.outputs.database_name
+        }
+        env {
+          name = "DB_USERNAME"
+          value_source {
+            secret_key_ref {
+              version = "latest"
+              secret  = local.environment_name == "production" ? "VOLUNTEERING_DB_USERNAME_PRODUCTION" : "VOLUNTEERING_DB_USERNAME_DEVELOPMENT"
+            }
+          }
+        }
+        env {
+          name = "DB_PASSWORD"
+          value_source {
+            secret_key_ref {
+              version = "latest"
+              secret  = local.environment_name == "production" ? "VOLUNTEERING_DB_PASSWORD_PRODUCTION" : "VOLUNTEERING_DB_PASSWORD_DEVELOPMENT"
+            }
+          }
+        }
         # env {
         #   name  = "ENVIRONMENT_ID"
         #   value = local.environment_name
