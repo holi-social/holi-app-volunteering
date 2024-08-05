@@ -30,7 +30,11 @@ export class Database {
   }
 
   // Function to perform cosine similarity search
-  async findTopMatches(userVector: number[], similarityThreshold: number, numMatches: number) {
+  async findTopMatches(
+    userVector: number[],
+    similarityThreshold: number,
+    numMatches: number,
+  ) {
     const query = `
       WITH vector_matches AS (
         SELECT id, 
@@ -45,25 +49,28 @@ export class Database {
     `;
 
     // Execute the query with the provided parameters
-    const result = await this.client.queryObject<{ id: number; description: string; similarity: number }>(query, userVector, similarityThreshold, numMatches);
+    const result = await this.client.queryObject<
+      { id: number; description: string; similarity: number }
+    >(query, userVector, similarityThreshold, numMatches);
 
     // Print the results
     for (const row of result.rows) {
-      console.log(`ID: ${row.id}, Description: ${row.description}, Similarity: ${row.similarity}`);
+      console.log(
+        `ID: ${row.id}, Description: ${row.description}, Similarity: ${row.similarity}`,
+      );
     }
   }
 
-// // User vector
-// const userVector = [1.0, 2.0, 3.0]; // Replace with your actual vector
+  // // User vector
+  // const userVector = [1.0, 2.0, 3.0]; // Replace with your actual vector
 
-// // Parameters for similarity search
-// const similarityThreshold = 0.8;
-// const numMatches = 5;
+  // // Parameters for similarity search
+  // const similarityThreshold = 0.8;
+  // const numMatches = 5;
 
-// // Find top matches
-// await findTopMatches(userVector, similarityThreshold, numMatches);
+  // // Find top matches
+  // await findTopMatches(userVector, similarityThreshold, numMatches);
 
-// // Close the database connection
-// await client.end();
-
+  // // Close the database connection
+  // await client.end();
 }

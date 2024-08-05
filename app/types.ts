@@ -53,6 +53,14 @@ export type TrackEngagementViewResponse = {
   id: string;
 };
 
+export type EngagementRecommendationsParameters = {
+  limit: number;
+  offset: number;
+  skills: string[];
+  topics: string[];
+  location?: PlaceDetails;
+};
+
 export type PlaceDetails = {
   name: string;
   geolocation: GeolocationGeoJSON;

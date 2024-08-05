@@ -62,6 +62,13 @@ const serverConfigFromEnv = (): ServerConfig => {
         ? "https://images.holi.social"
         : "https://dev-images.holi.social",
     ),
+    volunteeringDB: {
+      hostname: requiredEnv("DB_HOST", String),
+      port: requiredEnv("DB_PORT", String),
+      database: requiredEnv("DB_NAME", String),
+      username: requiredEnv("DB_USERNAME", String),
+      password: requiredEnv("DB_PASSWORD", String),
+    },
     fake,
   };
 };

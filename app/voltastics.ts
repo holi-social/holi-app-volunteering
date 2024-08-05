@@ -18,6 +18,7 @@ import {
   Engagement,
   EngagementOpportunitiesParameters,
   EngagementParameters,
+  EngagementRecommendationsParameters,
   EngagementResponse,
   EngagementsParameters,
   EngagementsResponse,
@@ -350,6 +351,17 @@ export const fetchEngagements =
         throw e;
       });
   };
+
+export const fetchEngagementRecommendations = (_config: ServerConfig) =>
+(
+  params: EngagementRecommendationsParameters,
+): Promise<EngagementsResponse> => {
+  logger.debug(`fetchEngagementRecommendations(${JSON.stringify(params)})`);
+  return Promise.resolve({
+    totalResults: 0,
+    data: [],
+  });
+};
 
 export const fetchCities = (
   voltasticsConfig: VoltasticsConfig,

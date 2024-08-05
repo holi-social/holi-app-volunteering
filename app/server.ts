@@ -3,6 +3,7 @@ import {
   CitiesResponse,
   EngagementOpportunitiesParameters,
   EngagementParameters,
+  EngagementRecommendationsParameters,
   EngagementResponse,
   EngagementsParameters,
   EngagementsResponse,
@@ -15,10 +16,12 @@ import {
   fetchCities,
   fetchEngagement,
   fetchEngagementOpportunities,
+  fetchEngagementRecommendations,
   fetchEngagements,
   trackEngagementView,
 } from "./voltastics.ts";
 import { logger } from "./logging.ts";
+import { DatabaseConfig } from "./database.ts";
 
 const typeDefs = `
     type Organizer {
@@ -73,6 +76,7 @@ const typeDefs = `
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
         engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse!
+        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!], skills: [String!], location: GeoJSON): EngagementsResponse!
         engagement(id: String!): Engagement
         categories: CategoriesResponse!
         engagements(offset: Int! = 0, limit: Int! = 10, location: String, category: String, longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse! @deprecated(reason: "Use engagementOpportunities instead, as its support will be discontinued after 1.5.1.")
@@ -122,6 +126,14 @@ const createResolvers = (config: ServerConfig) => ({
       config.fake
         ? Promise.resolve({ data: [] })
         : fetchCities(config.voltastics),
+    engagementRecommendations: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: EngagementRecommendationsParameters,
+    ): Promise<EngagementsResponse> =>
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : fetchEngagementRecommendations(config)(parameters),
   },
   Mutation: {
     trackEngagementView: (
@@ -150,6 +162,7 @@ export interface ServerConfig {
   voltastics: VoltasticsConfig;
   imageProxyBaseUrl: string;
   fake: boolean; // For local development. If set, the API returns dummy data
+  volunteeringDB: DatabaseConfig;
 }
 
 export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
