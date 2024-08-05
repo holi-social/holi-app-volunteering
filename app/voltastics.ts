@@ -28,6 +28,7 @@ import {
 } from "./types.ts";
 import { calculateRadius } from "./utils.ts";
 import { GraphQLError } from "./deps.ts";
+import { Database } from "./database.ts";
 
 const ERROR_CODE_NOT_FOUND = "NOT_FOUND";
 
@@ -460,17 +461,27 @@ const recosQueryVector = (topics: string[], skills: string[]): number[] => {
   return queryVector;
 };
 
-export const fetchEngagementRecommendations = (_config: ServerConfig) =>
-(
+export const fetchEngagementRecommendations = (config: ServerConfig) =>
+async (
   params: EngagementRecommendationsParameters,
 ): Promise<EngagementsResponse> => {
   const queryVector = recosQueryVector(params.topics, params.skills);
-  logger.debug(
-    `fetchEngagementRecommendations(${JSON.stringify(params)}) ${queryVector}`,
-  );
+  const db = new Database(config.volunteeringDB, config.imageProxyBaseUrl);
+  await db.connect();
+  const recos = await db
+    .findTopMatches(
+      queryVector,
+      .1,
+      params.limit > 100 || params.limit < 1 ? 10 : params.limit,
+    )
+    .catch((reason) => {
+      console.error("Error executing query", reason);
+      throw reason;
+    });
+  await db.disconnect();
   return Promise.resolve({
-    totalResults: 0,
-    data: [],
+    totalResults: recos.length,
+    data: recos,
   });
 };
 

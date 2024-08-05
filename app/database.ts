@@ -1,4 +1,5 @@
 import { Client } from "./deps.ts";
+import { Engagement } from "./types.ts";
 
 export type DatabaseConfig = {
   hostname: string;
@@ -8,17 +9,44 @@ export type DatabaseConfig = {
   password: string;
 };
 
+type DbRet = {
+  id: number;
+  title: string;
+  description: string;
+  link: string;
+  image?: string;
+  source: string;
+  uses: string;
+  orga?: string;
+  imageorga?: string;
+  location?: string;
+  latitude?: number;
+  longitude?: number;
+  cosine_similarity: number;
+};
+
 export class Database {
   private client: Client;
+  private imageProxyBaseUrl: string;
 
-  constructor(config: DatabaseConfig) {
+  constructor(config: DatabaseConfig, imageProxyBaseUrl: string) {
     this.client = new Client({
       hostname: config.hostname,
       port: config.port,
       database: config.database,
       user: config.username,
       password: config.password,
+      /*controls: {
+        debug: {
+          queries: true,
+          notices: true,
+          results: true,
+          queryInError: true,
+        },
+      },
+      */
     });
+    this.imageProxyBaseUrl = imageProxyBaseUrl;
   }
 
   async connect() {
@@ -31,34 +59,41 @@ export class Database {
 
   // Function to perform cosine similarity search
   async findTopMatches(
-    userVector: number[],
+    queryVector: number[],
     similarityThreshold: number,
     numMatches: number,
-  ) {
+  ): Promise<Engagement[]> {
     const query = `
       WITH vector_matches AS (
-        SELECT id, 
-              1 - (embedding_array <=> $1) AS similarity
-        FROM your_table
-        WHERE 1 - (embedding_array <=> $1) > $2
-        ORDER BY similarity DESC
-        LIMIT $3
+        SELECT *, 1 - (embedding_array <=> $1) AS cosine_similarity
+        FROM volunteering_voltastics_with_classification
+        WHERE 1 - (embedding_array <=> $1) > ${similarityThreshold}
+        ORDER BY cosine_similarity DESC
+        LIMIT ${numMatches}
       )
-      SELECT id, description, similarity 
+      SELECT *
       FROM vector_matches;
     `;
-
-    // Execute the query with the provided parameters
-    const result = await this.client.queryObject<
-      { id: number; description: string; similarity: number }
-    >(query, userVector, similarityThreshold, numMatches);
-
-    // Print the results
-    for (const row of result.rows) {
-      console.log(
-        `ID: ${row.id}, Description: ${row.description}, Similarity: ${row.similarity}`,
-      );
-    }
+    const result = await this.client.queryObject<DbRet>({
+      text: query,
+      args: [JSON.stringify(queryVector)],
+    });
+    return result.rows.map((row) => ({
+      id: "" + row.id,
+      title: row.title,
+      description: row.description,
+      url: row.link,
+      imageUrl: row.image &&
+        `${this.imageProxyBaseUrl}/crop:0:0/resize:auto:1024/plain/` +
+          encodeURIComponent(row.image), // ????
+      imageUrlOriginal: row.image, // TODO ????
+      source: row.source,
+      categories: JSON.parse(row.uses), // TODO this might fail
+      organizer: row.orga && { name: row.orga, imageUrl: row.imageorga },
+      location: row.location,
+      latitude: row.latitude,
+      longitude: row.longitude,
+    } as Engagement));
   }
 
   // // User vector
