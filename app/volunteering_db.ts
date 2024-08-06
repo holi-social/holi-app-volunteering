@@ -207,6 +207,7 @@ export class VolunteeringDB {
     const recos = await this.queryRecommendations(
       params.topics,
       params.skills,
+      params.offset < 0 ? 0 : params.offset,
       params.limit > 100 || params.limit < 1 ? 10 : params.limit,
     )
       .catch((reason) => {
@@ -223,7 +224,8 @@ export class VolunteeringDB {
   private async queryRecommendations(
     topics: string[],
     skills: string[],
-    numMatches: number,
+    offset: number,
+    limit: number,
   ): Promise<Engagement[]> {
     const queryVector = recosQueryVector(topics, skills);
     const query = `
@@ -231,7 +233,8 @@ export class VolunteeringDB {
         SELECT *, 1 - (embedding_array <=> $1) AS cosine_similarity
         FROM volunteering_voltastics_with_classification
         ORDER BY cosine_similarity DESC
-        LIMIT ${numMatches}
+        OFFSET ${offset}
+        LIMIT ${limit}
       )
       SELECT *
       FROM vector_matches;
