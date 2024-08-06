@@ -135,7 +135,7 @@ const recosQueryVector = (topics: string[], skills: string[]): number[] => {
 };
 
 const toEngagement =
-  (imageProxyBaseUrl: string) => (row: VolunteeringDBRow) => ({
+  (imageProxyBaseUrl: string) => (row: VolunteeringDBRow): Engagement => ({
     id: "" + row.id,
     title: row.title,
     description: row.description,
