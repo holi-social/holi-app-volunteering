@@ -2,6 +2,7 @@ import { logger, LogSeverity } from "./logging.ts";
 import {
   DEFAULT_CACHE_ENABLED,
   DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+  DEFAULT_DB_CONNECTION_ATTEMPTS,
   DEFAULT_PORT,
   ServerConfig,
   startServer,
@@ -68,6 +69,11 @@ const serverConfigFromEnv = (): ServerConfig => {
       database: requiredEnv("DB_NAME", String),
       username: requiredEnv("DB_USERNAME", String),
       password: requiredEnv("DB_PASSWORD", String),
+      connectionAttempts: requiredEnv(
+        "DB_CONNECTION_ATTEMPTS",
+        Number,
+        DEFAULT_DB_CONNECTION_ATTEMPTS,
+      ),
     },
     fake,
   };

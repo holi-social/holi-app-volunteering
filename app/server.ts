@@ -20,10 +20,7 @@ import {
   trackEngagementView,
 } from "./voltastics.ts";
 import { logger } from "./logging.ts";
-import {
-  fetchEngagementRecommendations,
-  VolunteeringDBConfig,
-} from "./volunteering_db.ts";
+import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
 
 const typeDefs = `
     type Organizer {
@@ -90,7 +87,10 @@ const typeDefs = `
     }
 `;
 
-const createResolvers = (config: ServerConfig) => ({
+const createResolvers = (
+  config: ServerConfig,
+  volunteeringDB: VolunteeringDB,
+) => ({
   Query: {
     engagementOpportunities: (
       // deno-lint-ignore no-explicit-any
@@ -135,7 +135,7 @@ const createResolvers = (config: ServerConfig) => ({
     ): Promise<EngagementsResponse> =>
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
-        : fetchEngagementRecommendations(config)(parameters),
+        : volunteeringDB.findRecommendations(parameters),
   },
   Mutation: {
     trackEngagementView: (
@@ -152,6 +152,8 @@ const createResolvers = (config: ServerConfig) => ({
 export const DEFAULT_PORT = 8004;
 export const DEFAULT_CACHE_ENABLED = true;
 export const DEFAULT_CACHE_TTL_MS_VOLTASTICS = 60_000;
+
+export const DEFAULT_DB_CONNECTION_ATTEMPTS = 10;
 
 export interface VoltasticsConfig {
   baseUrl: string;
@@ -182,7 +184,11 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
       }),
     ]
     : [];
-  const resolvers = createResolvers(config);
+  const volunteeringDB = new VolunteeringDB(
+    config.volunteeringDB,
+    config.imageProxyBaseUrl,
+  );
+  const resolvers = createResolvers(config, volunteeringDB);
   return createYoga({
     schema: createSchema({ resolvers, typeDefs }),
     graphiql: true,

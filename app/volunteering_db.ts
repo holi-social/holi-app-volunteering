@@ -5,7 +5,6 @@ import {
   EngagementsResponse,
 } from "./types.ts";
 import { logger } from "./logging.ts";
-import { ServerConfig } from "./server.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -13,6 +12,7 @@ export type VolunteeringDBConfig = {
   database: string;
   username: string;
   password: string;
+  connectionAttempts: number; // see https://deno-postgres.com/#/?id=database-reconnection
 };
 
 type VolunteeringDBRow = {
@@ -175,39 +175,11 @@ function safeJsonParse(str: string, errMsg: string) {
   }
 }
 
-export const fetchEngagementRecommendations = (config: ServerConfig) =>
-async (
-  params: EngagementRecommendationsParameters,
-): Promise<EngagementsResponse> => {
-  const db = new VolunteeringDB(
-    config.volunteeringDB,
-    config.imageProxyBaseUrl,
-  );
-  await db.connect();
-  const recos = await db
-    .findRecommendations(
-      params.topics,
-      params.skills,
-      .1,
-      params.limit > 100 || params.limit < 1 ? 10 : params.limit,
-    )
-    .catch((reason) => {
-      console.error("Error executing query", reason);
-      throw reason;
-    });
-  await db.disconnect();
-  return Promise.resolve({
-    totalResults: recos.length,
-    data: recos,
-  });
-};
-
 export class VolunteeringDB {
   private client: Client;
   private readonly imageProxyBaseUrl: string;
 
   constructor(config: VolunteeringDBConfig, imageProxyBaseUrl: string) {
-    // TODO add a way to keep a connection open and automatically re-connect
     this.client = new Client({
       hostname: config.hostname,
       port: config.port,
@@ -222,20 +194,34 @@ export class VolunteeringDB {
           queryInError: true,
         },
       },
+      connection: {
+        attempts: config.connectionAttempts,
+      },
     });
     this.imageProxyBaseUrl = imageProxyBaseUrl;
   }
 
-  async connect() {
-    await this.client.connect();
-  }
-
-  async disconnect() {
-    await this.client.end();
+  async findRecommendations(
+    params: EngagementRecommendationsParameters,
+  ): Promise<EngagementsResponse> {
+    const recos = await this.queryRecommendations(
+      params.topics,
+      params.skills,
+      .1,
+      params.limit > 100 || params.limit < 1 ? 10 : params.limit,
+    )
+      .catch((reason) => {
+        console.error("Error executing query", reason);
+        throw reason;
+      });
+    return Promise.resolve({
+      totalResults: recos.length,
+      data: recos,
+    });
   }
 
   // Function to perform cosine similarity search
-  async findRecommendations(
+  private async queryRecommendations(
     topics: string[],
     skills: string[],
     similarityThreshold: number,
