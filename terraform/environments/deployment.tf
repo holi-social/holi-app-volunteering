@@ -98,19 +98,19 @@ resource "google_cloud_run_service" "volunteering_api" {
         }
         env {
           name = "DB_USERNAME"
-          value_source {
+          value_from {
             secret_key_ref {
-              version = "latest"
-              secret  = local.environment_name == "production" ? "VOLUNTEERING_DB_USERNAME_PRODUCTION" : "VOLUNTEERING_DB_USERNAME_DEVELOPMENT"
+              key = "latest"
+              name  = local.environment_name == "production" ? "VOLUNTEERING_DB_USERNAME_PRODUCTION" : "VOLUNTEERING_DB_USERNAME_DEVELOPMENT"
             }
           }
         }
         env {
           name = "DB_PASSWORD"
-          value_source {
+          value_from {
             secret_key_ref {
-              version = "latest"
-              secret  = local.environment_name == "production" ? "VOLUNTEERING_DB_PASSWORD_PRODUCTION" : "VOLUNTEERING_DB_PASSWORD_DEVELOPMENT"
+              key = "latest"
+              name  = local.environment_name == "production" ? "VOLUNTEERING_DB_PASSWORD_PRODUCTION" : "VOLUNTEERING_DB_PASSWORD_DEVELOPMENT"
             }
           }
         }
