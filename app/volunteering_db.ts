@@ -227,10 +227,13 @@ export class VolunteeringDB {
     offset: number,
     limit: number,
   ): Promise<Engagement[]> {
-    const queryVector = recosQueryVector(topics, skills);
-    const query = `
+    const queryVector = JSON.stringify(recosQueryVector(topics, skills));
+
+    // special syntax for Denos postgres client, resulting in an SQL injection-safe prepared statement
+    // see https://deno-postgres.com/#/?id=template-strings
+    const result = await this.client.queryObject<VolunteeringDBRow>`
       WITH vector_matches AS (
-        SELECT *, 1 - (embedding_array <=> $1) AS cosine_similarity
+        SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
         FROM volunteering_voltastics_with_classification
         ORDER BY cosine_similarity DESC
         OFFSET ${offset}
@@ -239,10 +242,6 @@ export class VolunteeringDB {
       SELECT *
       FROM vector_matches;
     `;
-    const result = await this.client.queryObject<VolunteeringDBRow>({
-      text: query,
-      args: [JSON.stringify(queryVector)],
-    });
     return result.rows.map(toEngagement(this.imageProxyBaseUrl));
   }
 }
