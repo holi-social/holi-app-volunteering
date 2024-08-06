@@ -135,6 +135,14 @@ const serverConfigMock: ServerConfig = {
   imageProxyBaseUrl: "https://dev-images.holi.social",
   cacheTtlMsVoltastics: 0,
   fake: false,
+  volunteeringDB: {
+    hostname: "fakehost",
+    port: "1234",
+    database: "volunteering",
+    password: "secret",
+    username: "admin",
+    connectionAttempts: 10,
+  },
 };
 
 const noCacheServerConfig = {
@@ -144,6 +152,14 @@ const noCacheServerConfig = {
   port: 0,
   cacheTtlMsVoltastics: 0,
   fake: false,
+  volunteeringDB: {
+    hostname: "fakehost",
+    port: "1234",
+    database: "volunteering",
+    password: "secret",
+    username: "admin",
+    connectionAttempts: 10,
+  },
 };
 
 describe("voltastics", () => {
@@ -301,7 +317,7 @@ describe("voltastics", () => {
     });
   });
 
-  describe("querying categorie", () => {
+  describe("querying categories", () => {
     it("correctly parses category list", async () => {
       fetchStub = stubFetch(apiCategoriesResponse);
 

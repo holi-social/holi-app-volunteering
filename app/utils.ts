@@ -1,6 +1,7 @@
 import { GeolocationGeometry } from "./types.ts";
 import { turf } from "./deps.ts";
 import { ApiDefaults } from "./api_types.ts";
+import { logger } from "./logging.ts";
 
 /**
  * Calculates the radius of a given polygon or multi-polygon geometry.
@@ -35,4 +36,17 @@ export function calculateRadius(geometry: GeolocationGeometry) {
   }
 
   return radius;
+}
+
+export function isNonEmptyString(str?: string) {
+  return typeof str === "string" && str.trim().length > 0;
+}
+
+export function safeJsonParse(str: string, errMsg: string) {
+  try {
+    return JSON.parse(str);
+  } catch (_e) {
+    logger.warn(errMsg);
+    return undefined;
+  }
 }

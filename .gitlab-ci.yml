@@ -1,7 +1,9 @@
 default:
   before_script:
     - set -ex
-    - env
+    # env -0 | sort -z | tr '\0' '\n': Sort env output alphabetically, keeping multiline variables intact
+    # egrep: Remove sensitive information from the output of env
+    - env -0 | sort -z | tr '\0' '\n' | egrep -ve '^(DOCKER_AUTH_CONFIG|GOOGLE_APPLICATION_CREDENTIALS)=.*'
   interruptible: true
   tags:
     - 1cpu-4gb # build on smaller machine
@@ -13,7 +15,7 @@ variables:
 
 .deploy:
   image:
-    name: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/hashicorp/terraform:1.6.1'
+    name: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/hashicorp/terraform:1.6.6'
     # default entrypoint is terraform command, but we want to run shell scripts
     entrypoint: ["/bin/sh", "-c"]
   variables:
@@ -46,7 +48,7 @@ variables:
 ## common steps
 
 cache_lint_test:
-  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:alpine-1.40.1'
+  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:alpine-1.45.2'
   stage: "test"
   script:
     - deno cache --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
@@ -69,9 +71,9 @@ include:
 
 build_docker:
   needs: ["cache_lint_test"]
-  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/docker:20.10'
+  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/docker:27'
   services:
-    - docker:20.10-dind
+    - 'docker:27-dind'
   variables:
     # this could be fetched via terraform output ("gcr_location" in infra project), but then we would need an extra job for terraform
     GCR_IMAGE: europe-north1-docker.pkg.dev/holi-shared/docker/holi-volunteering-api
@@ -107,7 +109,7 @@ review_e2e:
 review_destroy:
   needs: ["review_deploy"]
   image:
-    name: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/hashicorp/terraform:1.6.1'
+    name: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/hashicorp/terraform:1.6.6'
     # default entrypoint is terraform command, but we want to run shell scripts
     entrypoint: ["/bin/sh", "-c"]
   variables:

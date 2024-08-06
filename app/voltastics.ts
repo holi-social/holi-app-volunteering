@@ -150,38 +150,41 @@ const buildVoltasticsEngagementOpportunitiesSearchParams = ({
   return params;
 };
 
-export const fetchEngagementOpportunities =
-  (config: ServerConfig) =>
-  (params: EngagementOpportunitiesParameters): Promise<EngagementsResponse> => {
-    const searchParams = buildVoltasticsEngagementOpportunitiesSearchParams(
-      params,
-    );
-    const start = Date.now();
-    logger.info(
-      `fetching engagement opportunities from ${config.voltastics.baseUrl}`,
-    );
+export const fetchEngagementOpportunities = (config: ServerConfig) =>
+(
+  params: EngagementOpportunitiesParameters,
+): Promise<EngagementsResponse> => {
+  const searchParams = buildVoltasticsEngagementOpportunitiesSearchParams(
+    params,
+  );
+  const start = Date.now();
+  logger.info(
+    `fetching engagement opportunities from ${config.voltastics.baseUrl}`,
+  );
 
-    return fetchFromVoltasticsApi(
-      config.voltastics,
-      ApiRoutes.SEARCH_ENGAGEMENTS,
-      searchParams,
-    )
-      .then((result) => result.json())
-      .then(transformEngagementsResponse(config.imageProxyBaseUrl))
-      .then((result) => {
-        const duration = Date.now() - start;
-        logger.debug(`fetching engagement opportunities took ${duration} ms`);
-        return result;
-      })
-      .catch((e) => {
-        const duration = Date.now() - start;
-        logger.error(
-          `Error performing request to ${config.voltastics.baseUrl} after ${duration} ms: ${e.message}`,
-          { duration },
-        );
-        throw e;
-      });
-  };
+  return fetchFromVoltasticsApi(
+    config.voltastics,
+    ApiRoutes.SEARCH_ENGAGEMENTS,
+    searchParams,
+  )
+    .then((result) => result.json())
+    .then(transformEngagementsResponse(config.imageProxyBaseUrl))
+    .then((result) => {
+      const duration = Date.now() - start;
+      logger.debug(
+        `fetching engagement opportunities took ${duration} ms`,
+      );
+      return result;
+    })
+    .catch((e) => {
+      const duration = Date.now() - start;
+      logger.error(
+        `Error performing request to ${config.voltastics.baseUrl} after ${duration} ms: ${e.message}`,
+        { duration },
+      );
+      throw e;
+    });
+};
 
 export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
 (
@@ -218,7 +221,9 @@ export const fetchEngagement =
     searchParams.append("id", id);
 
     const start = Date.now();
-    logger.info(`fetching engagement ${id} from ${config.voltastics.baseUrl}`);
+    logger.info(
+      `fetching engagement ${id} from ${config.voltastics.baseUrl}`,
+    );
     return fetchFromVoltasticsApi(
       config.voltastics,
       ApiRoutes.ENGAGEMENT,
