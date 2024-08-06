@@ -134,8 +134,6 @@ const recosQueryVector = (topics: string[], skills: string[]): number[] => {
   return queryVector;
 };
 
-// TODO table (and therefore result) contains both a column 'embedding' and 'embedding_array'. what's the difference?
-
 const toEngagement =
   (imageProxyBaseUrl: string) => (row: VolunteeringDBRow) => ({
     id: "" + row.id,
