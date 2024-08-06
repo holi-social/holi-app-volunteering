@@ -83,15 +83,37 @@ resource "google_cloud_run_service" "volunteering_api" {
           name  = "IMAGE_PROXY_BASE_URL"
           value = local.environment == "production" ? "https://images.holi.social" : "https://dev-images.holi.social"
         }
-        # env {
-        #   name  = "ENVIRONMENT_ID"
-        #   value = local.environment_name
-        # }
-        # env {
-        #   name  = "SENTRY_DSN"
-        #   value = "https://0e0fac0c76884e0a95432d780c4560fc@o949544.ingest.sentry.io/6741291"
-        # }
 
+        env {
+          name  = "DB_HOST"
+          value = local.environment_name == "production" ? data.terraform_remote_state.holi_infra_state.outputs.database_ip_address_production : data.terraform_remote_state.holi_infra_state.outputs.database_ip_address_development
+        }
+        env {
+          name  = "DB_PORT"
+          value = "5432"
+        }
+        env {
+          name  = "DB_NAME"
+          value = google_sql_database.database.instance
+        }
+        env {
+          name = "DB_USERNAME"
+          value_from {
+            secret_key_ref {
+              key = "latest"
+              name  = local.environment_name == "production" ? "VOLUNTEERING_DB_USERNAME_PRODUCTION" : "VOLUNTEERING_DB_USERNAME_DEVELOPMENT"
+            }
+          }
+        }
+        env {
+          name = "DB_PASSWORD"
+          value_from {
+            secret_key_ref {
+              key = "latest"
+              name  = local.environment_name == "production" ? "VOLUNTEERING_DB_PASSWORD_PRODUCTION" : "VOLUNTEERING_DB_PASSWORD_DEVELOPMENT"
+            }
+          }
+        }
         resources {
           limits = {
             # cpu can only be scaled down to 1000m as long as container_concurrency is set to != 1

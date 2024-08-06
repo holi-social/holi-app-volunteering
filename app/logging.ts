@@ -88,6 +88,10 @@ class Logger {
     this.log(LogSeverity.INFO, message, options);
   }
 
+  warn(message: string, options = {}) {
+    this.log(LogSeverity.WARNING, message, options);
+  }
+
   error(message: string, options = {}) {
     this.log(LogSeverity.ERROR, message, options);
   }
