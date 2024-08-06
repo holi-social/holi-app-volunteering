@@ -2,7 +2,7 @@ import { Client } from "./deps.ts";
 import { Engagement } from "./types.ts";
 import { logger } from "./logging.ts";
 
-export type DatabaseConfig = {
+export type VolunteeringDBConfig = {
   hostname: string;
   port: string;
   database: string;
@@ -10,7 +10,7 @@ export type DatabaseConfig = {
   password: string;
 };
 
-type DbRet = {
+type VolunteeringDBRow = {
   id: number;
   title: string;
   description: string;
@@ -32,7 +32,7 @@ export class Database {
   private client: Client;
   private readonly imageProxyBaseUrl: string;
 
-  constructor(config: DatabaseConfig, imageProxyBaseUrl: string) {
+  constructor(config: VolunteeringDBConfig, imageProxyBaseUrl: string) {
     // TODO add a way to keep a connection open and automatically re-connect
     this.client = new Client({
       hostname: config.hostname,
@@ -77,36 +77,39 @@ export class Database {
       SELECT *
       FROM vector_matches;
     `;
-    const result = await this.client.queryObject<DbRet>({
+    const result = await this.client.queryObject<VolunteeringDBRow>({
       text: query,
       args: [JSON.stringify(queryVector)],
     });
-    return result.rows.map((row) => ({
-      id: "" + row.id,
-      title: row.title,
-      description: row.description,
-      url: row.link,
-      imageUrl: row.image &&
-        `${this.imageProxyBaseUrl}/crop:0:0/resize:auto:1024/plain/` +
-          encodeURIComponent(row.image),
-      imageUrlOriginal: row.image,
-      source: row.source,
-      categories: safeJsonParse(
-        row.uses,
-        `Failed parsing 'categories' for ID ${row.id}`,
-      ),
-      organizer: isNonEmptyString(row.orga)
-        ? {
-          name: row.orga!,
-          imageUrl: isNonEmptyString(row.imageorga) ? row.imageorga : undefined,
-        }
-        : undefined,
-      location: row.location,
-      latitude: row.latitude,
-      longitude: row.longitude,
-    }));
+    return result.rows.map(toEngagement(this.imageProxyBaseUrl));
   }
 }
+
+const toEngagement =
+  (imageProxyBaseUrl: string) => (row: VolunteeringDBRow) => ({
+    id: "" + row.id,
+    title: row.title,
+    description: row.description,
+    url: row.link,
+    imageUrl: row.image &&
+      `${imageProxyBaseUrl}/crop:0:0/resize:auto:1024/plain/` +
+        encodeURIComponent(row.image),
+    imageUrlOriginal: row.image,
+    source: row.source,
+    categories: safeJsonParse(
+      row.uses,
+      `Failed parsing 'categories' for ID ${row.id}`,
+    ),
+    organizer: isNonEmptyString(row.orga)
+      ? {
+        name: row.orga!,
+        imageUrl: isNonEmptyString(row.imageorga) ? row.imageorga : undefined,
+      }
+      : undefined,
+    location: row.location,
+    latitude: row.latitude,
+    longitude: row.longitude,
+  });
 
 function isNonEmptyString(str?: string) {
   return typeof str === "string" && str.trim().length > 0;

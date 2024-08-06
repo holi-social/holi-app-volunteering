@@ -21,7 +21,7 @@ import {
   trackEngagementView,
 } from "./voltastics.ts";
 import { logger } from "./logging.ts";
-import { DatabaseConfig } from "./database.ts";
+import { VolunteeringDBConfig } from "./database.ts";
 
 const typeDefs = `
     type Organizer {
@@ -162,7 +162,7 @@ export interface ServerConfig {
   voltastics: VoltasticsConfig;
   imageProxyBaseUrl: string;
   fake: boolean; // For local development. If set, the API returns dummy data
-  volunteeringDB: DatabaseConfig;
+  volunteeringDB: VolunteeringDBConfig;
 }
 
 export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
