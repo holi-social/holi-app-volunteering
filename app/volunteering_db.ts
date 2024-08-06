@@ -1,6 +1,11 @@
 import { Client } from "./deps.ts";
-import { Engagement } from "./types.ts";
+import {
+  Engagement,
+  EngagementRecommendationsParameters,
+  EngagementsResponse,
+} from "./types.ts";
 import { logger } from "./logging.ts";
+import { ServerConfig } from "./server.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -170,7 +175,34 @@ function safeJsonParse(str: string, errMsg: string) {
   }
 }
 
-export class Database {
+export const fetchEngagementRecommendations = (config: ServerConfig) =>
+async (
+  params: EngagementRecommendationsParameters,
+): Promise<EngagementsResponse> => {
+  const db = new VolunteeringDB(
+    config.volunteeringDB,
+    config.imageProxyBaseUrl,
+  );
+  await db.connect();
+  const recos = await db
+    .findRecommendations(
+      params.topics,
+      params.skills,
+      .1,
+      params.limit > 100 || params.limit < 1 ? 10 : params.limit,
+    )
+    .catch((reason) => {
+      console.error("Error executing query", reason);
+      throw reason;
+    });
+  await db.disconnect();
+  return Promise.resolve({
+    totalResults: recos.length,
+    data: recos,
+  });
+};
+
+export class VolunteeringDB {
   private client: Client;
   private readonly imageProxyBaseUrl: string;
 

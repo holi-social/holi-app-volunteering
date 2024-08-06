@@ -18,7 +18,6 @@ import {
   Engagement,
   EngagementOpportunitiesParameters,
   EngagementParameters,
-  EngagementRecommendationsParameters,
   EngagementResponse,
   EngagementsParameters,
   EngagementsResponse,
@@ -28,7 +27,6 @@ import {
 } from "./types.ts";
 import { calculateRadius } from "./utils.ts";
 import { GraphQLError } from "./deps.ts";
-import { Database } from "./database.ts";
 
 const ERROR_CODE_NOT_FOUND = "NOT_FOUND";
 
@@ -357,30 +355,6 @@ export const fetchEngagements =
         throw e;
       });
   };
-
-export const fetchEngagementRecommendations = (config: ServerConfig) =>
-async (
-  params: EngagementRecommendationsParameters,
-): Promise<EngagementsResponse> => {
-  const db = new Database(config.volunteeringDB, config.imageProxyBaseUrl);
-  await db.connect();
-  const recos = await db
-    .findRecommendations(
-      params.topics,
-      params.skills,
-      .1,
-      params.limit > 100 || params.limit < 1 ? 10 : params.limit,
-    )
-    .catch((reason) => {
-      console.error("Error executing query", reason);
-      throw reason;
-    });
-  await db.disconnect();
-  return Promise.resolve({
-    totalResults: recos.length,
-    data: recos,
-  });
-};
 
 export const fetchCities = (
   voltasticsConfig: VoltasticsConfig,

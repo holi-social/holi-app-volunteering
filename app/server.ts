@@ -16,12 +16,14 @@ import {
   fetchCities,
   fetchEngagement,
   fetchEngagementOpportunities,
-  fetchEngagementRecommendations,
   fetchEngagements,
   trackEngagementView,
 } from "./voltastics.ts";
 import { logger } from "./logging.ts";
-import { VolunteeringDBConfig } from "./database.ts";
+import {
+  fetchEngagementRecommendations,
+  VolunteeringDBConfig,
+} from "./volunteering_db.ts";
 
 const typeDefs = `
     type Organizer {
