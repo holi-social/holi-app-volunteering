@@ -94,7 +94,7 @@ resource "google_cloud_run_service" "volunteering_api" {
         }
         env {
           name  = "DB_NAME"
-          value = google_sql_database.database.instance
+          value = google_sql_database.database.name
         }
         env {
           name = "DB_USERNAME"
