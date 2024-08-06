@@ -4,7 +4,7 @@ import {
   EngagementRecommendationsParameters,
   EngagementsResponse,
 } from "./types.ts";
-import { logger } from "./logging.ts";
+import { isNonEmptyString, safeJsonParse } from "./utils.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -159,19 +159,6 @@ const toEngagement =
     latitude: row.latitude,
     longitude: row.longitude,
   });
-
-function isNonEmptyString(str?: string) {
-  return typeof str === "string" && str.trim().length > 0;
-}
-
-function safeJsonParse(str: string, errMsg: string) {
-  try {
-    return JSON.parse(str);
-  } catch (_e) {
-    logger.warn(errMsg);
-    return undefined;
-  }
-}
 
 export class VolunteeringDB {
   private client: Client;
