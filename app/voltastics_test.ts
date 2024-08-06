@@ -141,6 +141,7 @@ const serverConfigMock: ServerConfig = {
     database: "volunteering",
     password: "secret",
     username: "admin",
+    connectionAttempts: 10,
   },
 };
 
@@ -157,6 +158,7 @@ const noCacheServerConfig = {
     database: "volunteering",
     password: "secret",
     username: "admin",
+    connectionAttempts: 10,
   },
 };
 
@@ -315,7 +317,7 @@ describe("voltastics", () => {
     });
   });
 
-  describe("querying categorie", () => {
+  describe("querying categories", () => {
     it("correctly parses category list", async () => {
       fetchStub = stubFetch(apiCategoriesResponse);
 
