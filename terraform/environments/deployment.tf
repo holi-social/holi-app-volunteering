@@ -94,7 +94,7 @@ resource "google_cloud_run_service" "volunteering_api" {
         }
         env {
           name  = "DB_NAME"
-          value = local.environment == "production" ? data.terraform_remote_state.holi_volunteering_api_environments_state_production.outputs.database_name : data.terraform_remote_state.holi_volunteering_api_environments_state_development.outputs.database_name
+          value = google_sql_database.database.instance
         }
         env {
           name = "DB_USERNAME"
@@ -114,15 +114,6 @@ resource "google_cloud_run_service" "volunteering_api" {
             }
           }
         }
-        # env {
-        #   name  = "ENVIRONMENT_ID"
-        #   value = local.environment_name
-        # }
-        # env {
-        #   name  = "SENTRY_DSN"
-        #   value = "https://0e0fac0c76884e0a95432d780c4560fc@o949544.ingest.sentry.io/6741291"
-        # }
-
         resources {
           limits = {
             # cpu can only be scaled down to 1000m as long as container_concurrency is set to != 1
