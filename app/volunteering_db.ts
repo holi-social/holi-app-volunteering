@@ -5,6 +5,10 @@ import {
   EngagementsResponse,
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
+import { calculateRadius } from "./utils.ts";
+import {
+  PlaceDetails,
+} from "./types.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -193,9 +197,11 @@ export class VolunteeringDB {
   async findRecommendations(
     params: EngagementRecommendationsParameters,
   ): Promise<EngagementsResponse> {
+    
     const recos = await this.queryRecommendations(
       params.topics,
       params.skills,
+      params.location,
       params.offset < 0 ? 0 : params.offset,
       params.limit > 100 || params.limit < 1 ? 10 : params.limit,
     )
@@ -213,25 +219,52 @@ export class VolunteeringDB {
   private async queryRecommendations(
     topics: string[],
     skills: string[],
+    location: PlaceDetails | undefined,
     offset: number,
     limit: number,
   ): Promise<Engagement[]> {
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
     console.debug(queryVector);
 
-    // special syntax for Denos postgres client, resulting in an SQL injection-safe prepared statement
-    // see https://deno-postgres.com/#/?id=template-strings
-    const result = await this.client.queryObject<VolunteeringDBRow>`
+    if (location) {
+      const { geolocation: { geometry, properties: { lat, lon } } } = location;
+      const radius = calculateRadius(geometry);
+
+      const result = await this.client.queryObject<VolunteeringDBRow>`
       WITH vector_matches AS (
-        SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
+        SELECT *,
+               1 - (embedding_array <=> ${JSON.stringify(queryVector)}) AS cosine_similarity,
+               ( 3959 * acos(
+                     cos(radians(${lat.toString()}))
+                     * cos(radians(latitude))
+                     * cos(radians(longitude) - radians(${lon.toString()}))
+                     + sin(radians(${lat.toString()})) * sin(radians(latitude))
+                   )
+               ) AS distance
         FROM volunteering_voltastics_with_classification
-        ORDER BY cosine_similarity DESC
+        ORDER BY cosine_similarity DESC, distance ASC
         OFFSET ${offset}
         LIMIT ${limit}
       )
       SELECT *
       FROM vector_matches;
     `;
+      return result.rows.map(toEngagement(this.imageProxyBaseUrl));
+    }
+
+    // special syntax for Denos postgres client, resulting in an SQL injection-safe prepared statement
+    // see https://deno-postgres.com/#/?id=template-strings
+    const result = await this.client.queryObject<VolunteeringDBRow>`
+    WITH vector_matches AS (
+      SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
+      FROM volunteering_voltastics_with_classification
+      ORDER BY cosine_similarity DESC
+      OFFSET ${offset}
+      LIMIT ${limit}
+    )
+    SELECT *
+    FROM vector_matches;
+  `;
     return result.rows.map(toEngagement(this.imageProxyBaseUrl));
   }
 }
