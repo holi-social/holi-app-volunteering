@@ -140,6 +140,16 @@ service to run. Please see the [configuration section](#configuration) to learn
 about the possible environment values, their purpose and where to find the
 values.
 
+### ML Recommendations
+
+In the context of HOLI-8190 recommendations were introduced. Recommendations
+are based on embeddings that were previously created by an ML pipeline and
+stored in a Postgres database within Google Cloud. These are currently not
+locally available. The endpoint `engagementRecommendations` relies on a
+connection to the aforementioned database that is only accessible to holi
+employees (unless running the service with the environment variable
+`FAKE=true`).
+
 ### Running
 
 To watch for file changes during development, run
