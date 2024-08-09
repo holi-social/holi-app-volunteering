@@ -42,7 +42,7 @@ export function calculateRadius(geometry: GeolocationGeometry) {
  * Calculates the overall score based on cosine similarity and distance.
  *
  * The formula used is:
- * 
+ *
  * `score = alpha * cosine_similarity + beta * (1 - normalized_distance)`
  *
  * where:
@@ -64,10 +64,12 @@ export function calculateScore(
   distance: number,
   max_distance: number,
   alpha: number,
-  beta: number
+  beta: number,
 ): number {
   // Normalize the distance to a range of 0 to 1
-  const normalized_distance = max_distance > 0 ? (1 - (distance / max_distance)) : 0;
+  const normalized_distance = max_distance > 0
+    ? (1 - (distance / max_distance))
+    : 0;
 
   // Calculate the final score
   const score = alpha * cosine_similarity + beta * (1 - normalized_distance);

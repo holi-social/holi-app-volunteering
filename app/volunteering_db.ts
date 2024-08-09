@@ -6,9 +6,7 @@ import {
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
 // import { calculateRadius, calculateScore } from "./utils.ts";
-import {
-  PlaceDetails,
-} from "./types.ts";
+import { PlaceDetails } from "./types.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -197,7 +195,6 @@ export class VolunteeringDB {
   async findRecommendations(
     params: EngagementRecommendationsParameters,
   ): Promise<EngagementsResponse> {
-    
     const recos = await this.queryRecommendations(
       params.topics,
       params.skills,
@@ -228,7 +225,7 @@ export class VolunteeringDB {
 
     // Define weight parameters
     const alpha = 0.7; // Weight for cosine similarity
-    const beta = 0.3;  // Weight for proximity
+    const beta = 0.3; // Weight for proximity
     const maxAcceptableDistance = 50000; // in meters (e.g., 50 km)
 
     if (location) {
@@ -265,8 +262,6 @@ export class VolunteeringDB {
     //   const alpha = 0.7; // Adjust these weights
     //   const beta = 0.3;
 
-      
-
     //   const result = await this.client.queryObject<VolunteeringDBRow>`
     //   WITH vector_matches AS (
     //     SELECT *,
@@ -284,18 +279,18 @@ export class VolunteeringDB {
     //   FROM vector_matches;
     // `;
 
-      // // Determine the max distance in the result set for normalization
-      // const max_distance = result.rows.reduce((max, row) => Math.max(max, row.distance), 0);
+    // // Determine the max distance in the result set for normalization
+    // const max_distance = result.rows.reduce((max, row) => Math.max(max, row.distance), 0);
 
-      // const scoredResults = result.rows.map(row => ({
-      //   ...row,
-      //   score: calculateScore(row.cosine_similarity, row.distance, max_distance, alpha, beta)
-      // }));
+    // const scoredResults = result.rows.map(row => ({
+    //   ...row,
+    //   score: calculateScore(row.cosine_similarity, row.distance, max_distance, alpha, beta)
+    // }));
 
-      // scoredResults.sort((a, b) => b.score - a.score);
+    // scoredResults.sort((a, b) => b.score - a.score);
 
-      // return scoredResults.slice(0, limit).map(toEngagement(this.imageProxyBaseUrl));
-      // }
+    // return scoredResults.slice(0, limit).map(toEngagement(this.imageProxyBaseUrl));
+    // }
 
     // special syntax for Denos postgres client, resulting in an SQL injection-safe prepared statement
     // see https://deno-postgres.com/#/?id=template-strings
