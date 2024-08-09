@@ -64,11 +64,27 @@ const serverConfigFromEnv = (): ServerConfig => {
         : "https://dev-images.holi.social",
     ),
     volunteeringDB: {
-      hostname: requiredEnv("DB_HOST", String),
-      port: requiredEnv("DB_PORT", String),
-      database: requiredEnv("DB_NAME", String),
-      username: requiredEnv("DB_USERNAME", String),
-      password: requiredEnv("DB_PASSWORD", String),
+      hostname: requiredEnv(
+        "DB_HOST",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
+      port: requiredEnv("DB_PORT", String, fake ? "31337" : undefined),
+      database: requiredEnv(
+        "DB_NAME",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
+      username: requiredEnv(
+        "DB_USERNAME",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
+      password: requiredEnv(
+        "DB_PASSWORD",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
       connectionAttempts: requiredEnv(
         "DB_CONNECTION_ATTEMPTS",
         Number,
