@@ -177,9 +177,9 @@ export class VolunteeringDB {
       password: config.password,
       controls: {
         debug: {
-          queries: true,
-          notices: true,
-          results: true,
+          queries: false,
+          notices: false,
+          results: false,
           queryInError: true,
         },
       },
@@ -217,7 +217,6 @@ export class VolunteeringDB {
     limit: number,
   ): Promise<Engagement[]> {
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
-    console.debug(queryVector);
 
     // special syntax for Denos postgres client, resulting in an SQL injection-safe prepared statement
     // see https://deno-postgres.com/#/?id=template-strings
