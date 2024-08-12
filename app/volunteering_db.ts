@@ -5,7 +5,6 @@ import {
   EngagementsResponse,
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
-// import { calculateRadius, calculateScore } from "./utils.ts";
 import { PlaceDetails } from "./types.ts";
 
 export type VolunteeringDBConfig = {
@@ -224,8 +223,8 @@ export class VolunteeringDB {
     console.debug(queryVector);
 
     // Define weight parameters
-    const alpha = 0.7; // Weight for cosine similarity
-    const beta = 0.3; // Weight for proximity
+    const rankingWeightCosineSimilarity = 0.7; // Weight for cosine similarity
+    const rankingWeightDistance = 0.3; // Weight for proximity
     const maxAcceptableDistance = 50000; // in meters (e.g., 50 km)
 
     if (location) {
@@ -241,8 +240,8 @@ export class VolunteeringDB {
           FROM volunteering_voltastics_with_classification
         ), scored AS (
           SELECT *,
-                (${alpha} * cosine_similarity) + 
-                (${beta} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
+                (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+                (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
           FROM calculations
         )
         SELECT *
@@ -253,42 +252,6 @@ export class VolunteeringDB {
       `;
       return result.rows.map(toEngagement(this.imageProxyBaseUrl));
     }
-
-    // if (location) {
-    //   const { geolocation: { geometry, properties: { lat, lon } } } = location;
-    //   const radius = calculateRadius(geometry);
-    //   const alpha = 0.7; // Adjust these weights
-    //   const beta = 0.3;
-
-    //   const result = await this.client.queryObject<VolunteeringDBRow>`
-    //   WITH vector_matches AS (
-    //     SELECT *,
-    //            1 - (embedding_array <=> ${JSON.stringify(queryVector)}) AS cosine_similarity,
-    //            ST_Distance(
-    //              ST_SetSRID(ST_MakePoint(longitude, latitude), 4326), -- Create point from table's lat/lon
-    //              ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326)
-    //            ) AS distance
-    //     FROM volunteering_voltastics_with_classification
-    //     ORDER BY cosine_similarity DESC
-    //     OFFSET ${offset}
-    //     LIMIT ${limit}
-    //   )
-    //   SELECT *
-    //   FROM vector_matches;
-    // `;
-
-    // // Determine the max distance in the result set for normalization
-    // const max_distance = result.rows.reduce((max, row) => Math.max(max, row.distance), 0);
-
-    // const scoredResults = result.rows.map(row => ({
-    //   ...row,
-    //   score: calculateScore(row.cosine_similarity, row.distance, max_distance, alpha, beta)
-    // }));
-
-    // scoredResults.sort((a, b) => b.score - a.score);
-
-    // return scoredResults.slice(0, limit).map(toEngagement(this.imageProxyBaseUrl));
-    // }
 
     // special syntax for Denos postgres client, resulting in an SQL injection-safe prepared statement
     // see https://deno-postgres.com/#/?id=template-strings
