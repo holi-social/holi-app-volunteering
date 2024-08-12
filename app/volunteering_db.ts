@@ -227,6 +227,8 @@ export class VolunteeringDB {
     const rankingWeightDistance = 0.3; // Weight for proximity
     const maxAcceptableDistance = 50000; // in meters (e.g., 50 km)
 
+    await this.client.queryObject(`CREATE EXTENSION IF NOT EXISTS postgis;`);
+
     if (location) {
       const { geolocation: { properties: { lat, lon } } } = location;
       const result = await this.client.queryObject<VolunteeringDBRow>`
