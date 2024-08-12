@@ -5,6 +5,8 @@ import {
   EngagementsResponse,
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
+import { ServerConfig } from "./server.ts";
+import { LatLng, resolveLatLng } from "./geo_api_client.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -191,13 +193,18 @@ export class VolunteeringDB {
   }
 
   async findRecommendations(
+    config: ServerConfig,
     params: EngagementRecommendationsParameters,
   ): Promise<EngagementsResponse> {
+    const latLng: LatLng | undefined = params.geolocationId
+      ? await resolveLatLng(config.geoAPIEndpointUrl, params.geolocationId)
+      : undefined;
     const recos = await this.queryRecommendations(
       params.topics,
       params.skills,
       params.offset < 0 ? 0 : params.offset,
       params.limit > 100 || params.limit < 1 ? 10 : params.limit,
+      latLng,
     )
       .catch((reason) => {
         console.error("Error executing query", reason);
@@ -215,6 +222,7 @@ export class VolunteeringDB {
     skills: string[],
     offset: number,
     limit: number,
+    _latLng?: LatLng,
   ): Promise<Engagement[]> {
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
 

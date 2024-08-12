@@ -135,7 +135,7 @@ const createResolvers = (
     ): Promise<EngagementsResponse> =>
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
-        : volunteeringDB.findRecommendations(parameters),
+        : volunteeringDB.findRecommendations(config, parameters),
   },
   Mutation: {
     trackEngagementView: (
