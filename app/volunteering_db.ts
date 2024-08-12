@@ -230,7 +230,6 @@ export class VolunteeringDB {
 
     if (location) {
       const { geolocation: { properties: { lat, lon } } } = location;
-
       const result = await this.client.queryObject<VolunteeringDBRow>`
         WITH calculations AS (
           SELECT *,
@@ -252,7 +251,6 @@ export class VolunteeringDB {
         OFFSET ${offset}
         LIMIT ${limit};
       `;
-
       return result.rows.map(toEngagement(this.imageProxyBaseUrl));
     }
 
