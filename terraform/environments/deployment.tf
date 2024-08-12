@@ -114,6 +114,10 @@ resource "google_cloud_run_service" "volunteering_api" {
             }
           }
         }
+        env {
+          name = "GEO_API_ENDPOINT_URL"
+          value = data.terraform_remote_state.holi_geo_api_environments_state.outputs.api_endpoint_url
+        }
         resources {
           limits = {
             # cpu can only be scaled down to 1000m as long as container_concurrency is set to != 1

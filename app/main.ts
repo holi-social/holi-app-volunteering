@@ -92,6 +92,11 @@ const serverConfigFromEnv = (): ServerConfig => {
       ),
     },
     fake,
+    geoAPIEndpointUrl: requiredEnv(
+      "GEO_API_ENDPOINT_URL",
+      String,
+      fake ? "dummy value" : undefined,
+    ),
   };
 };
 

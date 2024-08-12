@@ -21,6 +21,15 @@ data "terraform_remote_state" "holi_volunteering_api_common_state" {
   }
 }
 
+data "terraform_remote_state" "holi_geo_api_environments_state" {
+  backend = "gcs"
+  workspace = terraform.workspace == "production" ? "production" : "staging"
+  config = {
+    bucket = "holi-shared-terraform-state"
+    prefix = "geo-api-environments"
+  }
+}
+
 # provider google including beta features
 provider "google" {
   region = local.default_region

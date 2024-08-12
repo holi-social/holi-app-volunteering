@@ -167,6 +167,7 @@ export interface ServerConfig {
   imageProxyBaseUrl: string;
   fake: boolean; // For local development. If set, the API returns dummy data
   volunteeringDB: VolunteeringDBConfig;
+  geoAPIEndpointUrl: string;
 }
 
 export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
