@@ -58,7 +58,7 @@ export type EngagementRecommendationsParameters = {
   offset: number;
   skills: string[];
   topics: string[];
-  location?: PlaceDetails;
+  geolocationId?: string;
 };
 
 export type PlaceDetails = {
