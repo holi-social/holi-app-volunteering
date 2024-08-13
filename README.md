@@ -194,11 +194,12 @@ if "you know what you're doing".
 
 ### Configuration
 
-| Environment Variable            | Default Value                                                                            | Description                         |
-| ------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
-| PORT                            | 8004                                                                                     | the port to listen on               |
-| CACHE_ENABLED                   | true                                                                                     | wether or not to enable caching     |
-| CACHE_TTL_MS                    | 60 seconds                                                                               | time-to-live in ms                  |
-| VOLUNTEERING_VOLTASTICS_API_URL | undefined                                                                                | Voltastics API base URL             |
-| VOLUNTEERING_VOLTASTICS_API_KEY | undefined                                                                                | Voltastics API Token                |
-| IMAGE_PROXY_BASE_URL            | https://images.holi.social (production), https://dev-images.holi.social (all other envs) | Base URL for the image proxy server |
+| Environment Variable             | Default Value                                                                            | Description                            |
+|----------------------------------| ---------------------------------------------------------------------------------------- |----------------------------------------|
+| PORT                             | 8004                                                                                     | the port to listen on                  |
+| CACHE_ENABLED                    | true                                                                                     | wether or not to enable caching        |
+| CACHE_TTL_MS                     | 60 seconds                                                                               | time-to-live in ms                     |
+| VOLUNTEERING_VOLTASTICS_API_URL  | undefined                                                                                | Voltastics API base URL                |
+| VOLUNTEERING_VOLTASTICS_API_KEY  | undefined                                                                                | Voltastics API Token                   |
+| IMAGE_PROXY_BASE_URL             | https://images.holi.social (production), https://dev-images.holi.social (all other envs) | Base URL for the image proxy server    |
+| GEO_API_ENDPOINT_URL             | undefined                                                                                | GraphQL Endpoint URL for holis Geo API |

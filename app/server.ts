@@ -135,7 +135,7 @@ const createResolvers = (
     ): Promise<EngagementsResponse> =>
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
-        : volunteeringDB.findRecommendations(parameters),
+        : volunteeringDB.findRecommendations(config, parameters),
   },
   Mutation: {
     trackEngagementView: (
@@ -167,6 +167,7 @@ export interface ServerConfig {
   imageProxyBaseUrl: string;
   fake: boolean; // For local development. If set, the API returns dummy data
   volunteeringDB: VolunteeringDBConfig;
+  geoAPIEndpointUrl: string;
 }
 
 export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {

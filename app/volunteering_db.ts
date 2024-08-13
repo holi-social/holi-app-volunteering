@@ -5,7 +5,8 @@ import {
   EngagementsResponse,
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
-import { PlaceDetails } from "./types.ts";
+import { ServerConfig } from "./server.ts";
+import { LatLng, resolveLatLng } from "./geo_api_client.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -192,14 +193,31 @@ export class VolunteeringDB {
   }
 
   async findRecommendations(
+    config: ServerConfig,
     params: EngagementRecommendationsParameters,
   ): Promise<EngagementsResponse> {
+    const latLng: LatLng | undefined = params.geolocationId
+      ? await resolveLatLng(config.geoAPIEndpointUrl, params.geolocationId)
+        .then((latLng) => {
+          console.debug(
+            `Successfully resolved ${
+              JSON.stringify(latLng)
+            } for geolocationId=${params.geolocationId}`,
+          );
+          return latLng;
+        })
+        .catch((error) => {
+          console.warn(error);
+          // gracefully catch error so that recommendations will still be delivered but without location factored in
+          return undefined;
+        })
+      : undefined;
     const recos = await this.queryRecommendations(
       params.topics,
       params.skills,
-      params.location,
       params.offset < 0 ? 0 : params.offset,
       params.limit > 100 || params.limit < 1 ? 10 : params.limit,
+      latLng,
     )
       .catch((reason) => {
         console.error("Error executing query", reason);
@@ -215,9 +233,9 @@ export class VolunteeringDB {
   private async queryRecommendations(
     topics: string[],
     skills: string[],
-    location: PlaceDetails | undefined,
     offset: number,
     limit: number,
+    latLng?: LatLng,
   ): Promise<Engagement[]> {
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
 
@@ -228,15 +246,15 @@ export class VolunteeringDB {
 
     await this.client.queryObject(`CREATE EXTENSION IF NOT EXISTS postgis;`);
 
-    if (location) {
-      const { geolocation: { properties: { lat, lon } } } = location;
+    if (latLng) {
+      const { lat, lng } = latLng;
       const result = await this.client.queryObject<VolunteeringDBRow>`
         WITH calculations AS (
           SELECT *,
                 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
                 ST_Distance(
                   ST_SetSRID(ST_MakePoint(longitude, latitude), 4326),
-                  ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326)
+                  ST_SetSRID(ST_MakePoint(${lng.toString()}, ${lat.toString()}), 4326)
                 ) AS distance
           FROM volunteering_voltastics_with_classification
         ), scored AS (

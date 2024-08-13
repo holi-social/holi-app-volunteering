@@ -13,7 +13,7 @@
       "docker": "docker build -t volunteering-api . && docker run -it --init -p 8004:8004 volunteering-api",
       "coverage": "deno test --coverage=coverage && deno coverage coverage",
       "pre-commit": {
-        "cmd": "vr lint && vr fmt:check",
+        "cmd": "vr lint && vr fmt:check && deno test",
         "gitHook": "pre-commit"
       }
     }
