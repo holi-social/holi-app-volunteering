@@ -235,23 +235,56 @@ export class VolunteeringDB {
     skills: string[],
     offset: number,
     limit: number,
-    _latLng?: LatLng,
+    latLng?: LatLng,
   ): Promise<Engagement[]> {
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
+
+    // Define weight parameters
+    const rankingWeightCosineSimilarity = 0.7; // Weight for cosine similarity
+    const rankingWeightDistance = 0.3; // Weight for proximity
+    const maxAcceptableDistance = 50000; // in meters (e.g., 50 km)
+
+    await this.client.queryObject(`CREATE EXTENSION IF NOT EXISTS postgis;`);
+
+    if (latLng) {
+      const { lat, lng } = latLng;
+      const result = await this.client.queryObject<VolunteeringDBRow>`
+        WITH calculations AS (
+          SELECT *,
+                1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
+                ST_Distance(
+                  ST_SetSRID(ST_MakePoint(longitude, latitude), 4326),
+                  ST_SetSRID(ST_MakePoint(${lng.toString()}, ${lat.toString()}), 4326)
+                ) AS distance
+          FROM volunteering_voltastics_with_classification
+        ), scored AS (
+          SELECT *,
+                (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+                (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
+          FROM calculations
+        )
+        SELECT *
+        FROM scored
+        ORDER BY weighted_score DESC
+        OFFSET ${offset}
+        LIMIT ${limit};
+      `;
+      return result.rows.map(toEngagement(this.imageProxyBaseUrl));
+    }
 
     // special syntax for Denos postgres client, resulting in an SQL injection-safe prepared statement
     // see https://deno-postgres.com/#/?id=template-strings
     const result = await this.client.queryObject<VolunteeringDBRow>`
-      WITH vector_matches AS (
-        SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
-        FROM volunteering_voltastics_with_classification
-        ORDER BY cosine_similarity DESC
-        OFFSET ${offset}
-        LIMIT ${limit}
-      )
-      SELECT *
-      FROM vector_matches;
-    `;
+    WITH vector_matches AS (
+      SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
+      FROM volunteering_voltastics_with_classification
+      ORDER BY cosine_similarity DESC
+      OFFSET ${offset}
+      LIMIT ${limit}
+    )
+    SELECT *
+    FROM vector_matches;
+  `;
     return result.rows.map(toEngagement(this.imageProxyBaseUrl));
   }
 }
