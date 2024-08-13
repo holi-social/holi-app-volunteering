@@ -5,6 +5,7 @@ import {
   EngagementsResponse,
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
+import { PlaceDetails } from "./types.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -196,6 +197,7 @@ export class VolunteeringDB {
     const recos = await this.queryRecommendations(
       params.topics,
       params.skills,
+      params.location,
       params.offset < 0 ? 0 : params.offset,
       params.limit > 100 || params.limit < 1 ? 10 : params.limit,
     )
@@ -213,24 +215,58 @@ export class VolunteeringDB {
   private async queryRecommendations(
     topics: string[],
     skills: string[],
+    location: PlaceDetails | undefined,
     offset: number,
     limit: number,
   ): Promise<Engagement[]> {
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
 
+    // Define weight parameters
+    const rankingWeightCosineSimilarity = 0.7; // Weight for cosine similarity
+    const rankingWeightDistance = 0.3; // Weight for proximity
+    const maxAcceptableDistance = 50000; // in meters (e.g., 50 km)
+
+    await this.client.queryObject(`CREATE EXTENSION IF NOT EXISTS postgis;`);
+
+    if (location) {
+      const { geolocation: { properties: { lat, lon } } } = location;
+      const result = await this.client.queryObject<VolunteeringDBRow>`
+        WITH calculations AS (
+          SELECT *,
+                1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
+                ST_Distance(
+                  ST_SetSRID(ST_MakePoint(longitude, latitude), 4326),
+                  ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326)
+                ) AS distance
+          FROM volunteering_voltastics_with_classification
+        ), scored AS (
+          SELECT *,
+                (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+                (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
+          FROM calculations
+        )
+        SELECT *
+        FROM scored
+        ORDER BY weighted_score DESC
+        OFFSET ${offset}
+        LIMIT ${limit};
+      `;
+      return result.rows.map(toEngagement(this.imageProxyBaseUrl));
+    }
+
     // special syntax for Denos postgres client, resulting in an SQL injection-safe prepared statement
     // see https://deno-postgres.com/#/?id=template-strings
     const result = await this.client.queryObject<VolunteeringDBRow>`
-      WITH vector_matches AS (
-        SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
-        FROM volunteering_voltastics_with_classification
-        ORDER BY cosine_similarity DESC
-        OFFSET ${offset}
-        LIMIT ${limit}
-      )
-      SELECT *
-      FROM vector_matches;
-    `;
+    WITH vector_matches AS (
+      SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
+      FROM volunteering_voltastics_with_classification
+      ORDER BY cosine_similarity DESC
+      OFFSET ${offset}
+      LIMIT ${limit}
+    )
+    SELECT *
+    FROM vector_matches;
+  `;
     return result.rows.map(toEngagement(this.imageProxyBaseUrl));
   }
 }
