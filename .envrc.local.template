@@ -1,7 +1,12 @@
+export CACHE_ENABLED=false
+
 export VOLUNTEERING_VOLTASTICS_API_URL=
 export VOLUNTEERING_VOLTASTICS_API_KEY=
+
 export DB_HOST=
 export DB_PORT=
 export DB_NAME=
 export DB_USERNAME=
 export DB_PASSWORD=
+
+export GEO_API_ENDPOINT_URL=

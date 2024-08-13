@@ -198,6 +198,19 @@ export class VolunteeringDB {
   ): Promise<EngagementsResponse> {
     const latLng: LatLng | undefined = params.geolocationId
       ? await resolveLatLng(config.geoAPIEndpointUrl, params.geolocationId)
+        .then((latLng) => {
+          console.debug(
+            `Successfully resolved ${
+              JSON.stringify(latLng)
+            } for geolocationId=${params.geolocationId}`,
+          );
+          return latLng;
+        })
+        .catch((error) => {
+          console.warn(error);
+          // gracefully catch error so that recommendations will still be delivered but without location factored in
+          return undefined;
+        })
       : undefined;
     const recos = await this.queryRecommendations(
       params.topics,
