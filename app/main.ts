@@ -1,6 +1,7 @@
 import { logger, LogSeverity } from "./logging.ts";
 import {
   DEFAULT_CACHE_ENABLED,
+  DEFAULT_CACHE_TTL_MS_DB,
   DEFAULT_CACHE_TTL_MS_VOLTASTICS,
   DEFAULT_DB_CONNECTION_ATTEMPTS,
   DEFAULT_PORT,
@@ -43,6 +44,11 @@ const serverConfigFromEnv = (): ServerConfig => {
       "DEFAULT_CACHE_TTL_MS_VOLTASTICS",
       Number,
       DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+    ),
+    cacheTtlMsDB: requiredEnv(
+      "DEFAULT_CACHE_TTL_MS_DB",
+      Number,
+      DEFAULT_CACHE_TTL_MS_DB,
     ),
     voltastics: {
       baseUrl: requiredEnv(

@@ -121,6 +121,7 @@ const serverConfigMock: ServerConfig = {
   voltastics: voltasticsConfigMock,
   imageProxyBaseUrl: "https://dev-images.holi.social",
   cacheTtlMsVoltastics: 0,
+  cacheTtlMsDB: 0,
   fake: false,
   volunteeringDB: {
     hostname: "fakehost",
@@ -139,6 +140,7 @@ const noCacheServerConfig = {
   imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
   port: 0,
   cacheTtlMsVoltastics: 0,
+  cacheTtlMsDB: 0,
   fake: false,
   volunteeringDB: {
     hostname: "fakehost",

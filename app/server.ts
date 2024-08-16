@@ -5,6 +5,7 @@ import {
   EngagementRecommendationsParameters,
   EngagementResponse,
   EngagementsResponse,
+  FilteredEngagementsParameters,
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
@@ -82,6 +83,7 @@ const typeDefs = `
         engagement(id: String!): Engagement
         
         categories: CategoriesResponse!
+        filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!], skills: [String!], geolocationId: String): EngagementsResponse!
     }
 
     type Mutation {
@@ -109,6 +111,12 @@ const createResolvers = (
       // deno-lint-ignore no-explicit-any
       _parent: any,
     ): Promise<CategoriesResponse> => config.fake ? Promise.resolve({ data: [] }) : fetchCategories(config.voltastics),
+    filteredEngagements: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: FilteredEngagementsParameters,
+    ): Promise<EngagementsResponse> =>
+      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.filterEngagements(parameters),
     engagementRecommendations: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
@@ -128,7 +136,8 @@ const createResolvers = (
 
 export const DEFAULT_PORT = 8004;
 export const DEFAULT_CACHE_ENABLED = true;
-export const DEFAULT_CACHE_TTL_MS_VOLTASTICS = 60_000;
+export const DEFAULT_CACHE_TTL_MS_VOLTASTICS = 86_400_000; // 24 hours
+export const DEFAULT_CACHE_TTL_MS_DB = 3_600_000; // 1 hour
 
 export const DEFAULT_DB_CONNECTION_ATTEMPTS = 10;
 
@@ -139,7 +148,8 @@ export interface VoltasticsConfig {
 export interface ServerConfig {
   port: number; // default: 8004
   cacheEnabled: boolean; // default: true
-  cacheTtlMsVoltastics: number; // default: 60 seconds
+  cacheTtlMsVoltastics: number; // default: 24 hours
+  cacheTtlMsDB: number; // default: 1 hour
   voltastics: VoltasticsConfig;
   imageProxyBaseUrl: string;
   fake: boolean; // For local development. If set, the API returns dummy data
@@ -156,6 +166,8 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
           "Query.engagementOpportunities": config.cacheTtlMsVoltastics,
           "Query.engagement": config.cacheTtlMsVoltastics,
           "Query.categories": config.cacheTtlMsVoltastics,
+          "Query.filteredEngagements": config.cacheTtlMsDB,
+          "Query.engagementRecommendations": config.cacheTtlMsDB,
         },
       }),
     ]

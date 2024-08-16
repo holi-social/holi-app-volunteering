@@ -63,8 +63,12 @@ resource "google_cloud_run_service" "volunteering_api" {
           value = "true"
         }
         env {
-          name  = "CACHE_TTL_MS"
-          value = local.environment == "production" ? "86400000" : "86400000"
+          name  = "CACHE_TTL_MS_VOLTASTICS"
+          value = local.environment == "production" ? "86400000" : "86400000" # 24 hours
+        }
+        env {
+          name  = "CACHE_TTL_MS_DB"
+          value = local.environment == "production" ? "3600000" : "3600000" # 1 hour
         }
         env {
           name  = "VOLUNTEERING_VOLTASTICS_API_URL"

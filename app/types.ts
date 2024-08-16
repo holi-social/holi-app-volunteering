@@ -84,3 +84,11 @@ export type GeolocationGeoJSON = {
   properties: GeolocationCoordinates;
   geometry: GeolocationGeometry;
 };
+
+export type FilteredEngagementsParameters = {
+  limit: number;
+  offset: number;
+  skills: string[];
+  topics: string[];
+  geolocationId?: string;
+};
