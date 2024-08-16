@@ -5,8 +5,6 @@ import {
   EngagementsResponse,
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
-import { ServerConfig } from "./server.ts";
-import { LatLng, resolveLatLng } from "./geo_api_client.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -166,45 +164,42 @@ const toEngagement =
     longitude: row.longitude,
   });
 
+export type GeoLocation = {
+  lat: number;
+  lon: number;
+};
+
+export type GeoLocationResolver = (
+  geoLocationId: string,
+) => Promise<GeoLocation>;
+
 export class VolunteeringDB {
   private client: Client;
   private readonly imageProxyBaseUrl: string;
+  private resolveGeoLocation: GeoLocationResolver;
 
-  constructor(config: VolunteeringDBConfig, imageProxyBaseUrl: string) {
-    this.client = new Client({
-      hostname: config.hostname,
-      port: config.port,
-      database: config.database,
-      user: config.username,
-      password: config.password,
-      controls: {
-        debug: {
-          queries: false,
-          notices: false,
-          results: false,
-          queryInError: true,
-        },
-      },
-      connection: {
-        attempts: config.connectionAttempts,
-      },
-    });
+  constructor(
+    client: Client,
+    imageProxyBaseUrl: string,
+    resolveGeoLocation: GeoLocationResolver,
+  ) {
+    this.client = client;
     this.imageProxyBaseUrl = imageProxyBaseUrl;
+    this.resolveGeoLocation = resolveGeoLocation;
   }
 
   async findRecommendations(
-    config: ServerConfig,
     params: EngagementRecommendationsParameters,
   ): Promise<EngagementsResponse> {
-    const latLng: LatLng | undefined = params.geolocationId
-      ? await resolveLatLng(config.geoAPIEndpointUrl, params.geolocationId)
-        .then((latLng) => {
+    const geoLocation = params.geolocationId
+      ? await this.resolveGeoLocation(params.geolocationId)
+        .then((geoLocation) => {
           console.debug(
             `Successfully resolved ${
-              JSON.stringify(latLng)
+              JSON.stringify(geoLocation)
             } for geolocationId=${params.geolocationId}`,
           );
-          return latLng;
+          return geoLocation;
         })
         .catch((error) => {
           console.warn(error);
@@ -217,7 +212,7 @@ export class VolunteeringDB {
       params.skills,
       params.offset < 0 ? 0 : params.offset,
       params.limit > 100 || params.limit < 1 ? 10 : params.limit,
-      latLng,
+      geoLocation,
     )
       .catch((reason) => {
         console.error("Error executing query", reason);
@@ -235,7 +230,7 @@ export class VolunteeringDB {
     skills: string[],
     offset: number,
     limit: number,
-    latLng?: LatLng,
+    geoLocation?: GeoLocation,
   ): Promise<Engagement[]> {
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
 
@@ -246,15 +241,15 @@ export class VolunteeringDB {
 
     await this.client.queryObject(`CREATE EXTENSION IF NOT EXISTS postgis;`);
 
-    if (latLng) {
-      const { lat, lng } = latLng;
+    if (geoLocation) {
+      const { lat, lon } = geoLocation;
       const result = await this.client.queryObject<VolunteeringDBRow>`
         WITH calculations AS (
           SELECT *,
                 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
                 ST_Distance(
                   ST_SetSRID(ST_MakePoint(longitude, latitude), 4326),
-                  ST_SetSRID(ST_MakePoint(${lng.toString()}, ${lat.toString()}), 4326)
+                  ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326)
                 ) AS distance
           FROM volunteering_voltastics_with_classification
         ), scored AS (

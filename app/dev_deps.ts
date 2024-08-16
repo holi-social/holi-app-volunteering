@@ -1,6 +1,9 @@
 export {
   assertSpyCall,
+  assertSpyCalls,
   returnsNext,
+  type Spy,
+  spy,
   stub,
 } from "https://deno.land/std@0.155.0/testing/mock.ts";
 export type { Stub } from "https://deno.land/std@0.155.0/testing/mock.ts";
