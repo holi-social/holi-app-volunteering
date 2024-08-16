@@ -1,6 +1,7 @@
 import type { Spy } from "./dev_deps.ts";
 import {
   assertEquals,
+  assertRejects,
   assertSpyCall,
   assertSpyCalls,
   describe,
@@ -80,8 +81,8 @@ describe("VolunteeringDB", () => {
         volunteeringDB.findRecommendations({
           limit: 10,
           offset: 0,
-          skills: [],
           topics: [],
+          skills: [],
           geolocationId: "mock-geolocation-id",
         });
         assertSpyCall(resolveLocationSpy, 0, {
@@ -97,26 +98,45 @@ describe("VolunteeringDB", () => {
         volunteeringDB.findRecommendations({
           limit: 10,
           offset: 0,
+          topics: ["agriculture-food"],
           skills: [],
-          topics: [],
         });
         assertSpyCalls(resolveLocationSpy, 0);
       },
     );
   });
-  it("handles failures during resolution of latitude/longitude gracefully", () => {
+  it("falls back to recommend based only on topics and skills if given and geo location resolution fails", () => {
     withMockedDependencies(
       failingGeoLocationResolver,
       async (volunteeringDB, _resolveLocationSpy) => {
         const result = await volunteeringDB.findRecommendations({
           limit: 10,
           offset: 0,
+          topics: ["agriculture-food"],
           skills: [],
-          topics: [],
           geolocationId: "mock-geolocation-id",
         });
         assertEquals(result.totalResults, 0);
         assertEquals(result.data, []);
+      },
+    );
+  });
+  it("fails with error message if no topics and skills are given and geo location resolution fails", () => {
+    withMockedDependencies(
+      failingGeoLocationResolver,
+      async (volunteeringDB, _resolveLocationSpy) => {
+        await assertRejects(
+          () =>
+            volunteeringDB.findRecommendations({
+              limit: 10,
+              offset: 0,
+              topics: [],
+              skills: [],
+              geolocationId: "mock-geolocation-id",
+            }),
+          Error,
+          "geo location resolution failed and no topics or skills given",
+        );
       },
     );
   });

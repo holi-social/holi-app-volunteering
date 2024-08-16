@@ -1,4 +1,5 @@
 import { Client } from "./deps.ts";
+import type { QueryObjectResult } from "./deps.ts";
 import {
   Engagement,
   EngagementRecommendationsParameters,
@@ -189,97 +190,152 @@ export class VolunteeringDB {
   }
 
   async findRecommendations(
-    params: EngagementRecommendationsParameters,
+    { offset, limit, topics, skills, geolocationId }:
+      EngagementRecommendationsParameters,
   ): Promise<EngagementsResponse> {
-    const geoLocation = params.geolocationId
-      ? await this.resolveGeoLocation(params.geolocationId)
-        .then((geoLocation) => {
-          console.debug(
-            `Successfully resolved ${
-              JSON.stringify(geoLocation)
-            } for geolocationId=${params.geolocationId}`,
-          );
-          return geoLocation;
-        })
-        .catch((error) => {
-          console.warn(error);
-          // gracefully catch error so that recommendations will still be delivered but without location factored in
-          return undefined;
-        })
-      : undefined;
-    const recos = await this.queryRecommendations(
-      params.topics,
-      params.skills,
-      params.offset < 0 ? 0 : params.offset,
-      params.limit > 100 || params.limit < 1 ? 10 : params.limit,
-      geoLocation,
-    )
-      .catch((reason) => {
-        console.error("Error executing query", reason);
-        throw reason;
-      });
+    const result = await this.queryRecos(
+      offset < 0 ? 0 : offset,
+      limit > 100 || limit < 1 ? 10 : limit,
+      topics,
+      skills,
+      geolocationId,
+    ).catch((reason) => {
+      console.error("Error retrieving recommendations. Reason: ", reason);
+      throw reason;
+    });
+    const recos = result.rows.map(toEngagement(this.imageProxyBaseUrl));
     return Promise.resolve({
       totalResults: recos.length,
       data: recos,
     });
   }
 
-  // Function to perform cosine similarity search
-  private async queryRecommendations(
-    topics: string[],
-    skills: string[],
+  private async queryRecos(
     offset: number,
     limit: number,
-    geoLocation?: GeoLocation,
-  ): Promise<Engagement[]> {
-    const queryVector = JSON.stringify(recosQueryVector(topics, skills));
+    topics: string[],
+    skills: string[],
+    geolocationId?: string,
+  ): Promise<QueryObjectResult<VolunteeringDBRow>> {
+    const geoLocation = geolocationId
+      ? await this.resolveGeoLocation(geolocationId)
+        .then((geoLocation) => {
+          console.debug(
+            `Successfully resolved ${
+              JSON.stringify(geoLocation)
+            } for geolocationId=${geolocationId}`,
+          );
+          return geoLocation;
+        })
+        .catch((error) => {
+          console.warn(error);
+          if (topics.length == 0 && skills.length == 0) {
+            throw new Error(
+              "Can't retrieve recommendations: geo location resolution failed and no topics or skills given",
+            );
+          }
+          // gracefully catch error so that recommendations will still be delivered but without location factored in
+          return undefined;
+        })
+      : undefined;
 
-    // Define weight parameters
+    console.debug({ topics, skills, geoLocation });
+
+    if (geoLocation && (topics.length > 0 || skills.length > 0)) {
+      return this.queryRecosBasedOnTopicsSkillsAndLocation(
+        offset,
+        limit,
+        topics,
+        skills,
+        geoLocation,
+      );
+    } else if (geoLocation) {
+      return this.queryRecosBasedOnLocation(offset, limit, geoLocation);
+    } else if (topics.length > 0 || skills.length > 0) {
+      return this.queryRecosBasedOnTopicsAndSkills(
+        offset,
+        limit,
+        topics,
+        skills,
+      );
+    } else {
+      return Promise.reject(
+        "It is required to provide at least one of (topics, skills, or location) in order to retrieve recommendations",
+      );
+    }
+  }
+
+  private async queryRecosBasedOnTopicsAndSkills(
+    offset: number,
+    limit: number,
+    topics: string[],
+    skills: string[],
+  ): Promise<QueryObjectResult<VolunteeringDBRow>> {
+    const queryVector = JSON.stringify(recosQueryVector(topics, skills));
+    return await this.client.queryObject<VolunteeringDBRow>`
+      WITH vector_matches AS (
+        SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
+        FROM volunteering_voltastics_with_classification
+        ORDER BY cosine_similarity DESC
+        OFFSET ${offset}
+        LIMIT ${limit}
+      )
+      SELECT *
+      FROM vector_matches;
+    `;
+  }
+
+  private async queryRecosBasedOnTopicsSkillsAndLocation(
+    offset: number,
+    limit: number,
+    topics: string[],
+    skills: string[],
+    geoLocation: GeoLocation,
+  ): Promise<QueryObjectResult<VolunteeringDBRow>> {
     const rankingWeightCosineSimilarity = 0.7; // Weight for cosine similarity
     const rankingWeightDistance = 0.3; // Weight for proximity
     const maxAcceptableDistance = 50000; // in meters (e.g., 50 km)
+    const queryVector = JSON.stringify(recosQueryVector(topics, skills));
+    const { lat, lon } = geoLocation;
 
-    await this.client.queryObject(`CREATE EXTENSION IF NOT EXISTS postgis;`);
-
-    if (geoLocation) {
-      const { lat, lon } = geoLocation;
-      const result = await this.client.queryObject<VolunteeringDBRow>`
-        WITH calculations AS (
-          SELECT *,
-                1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
-                ST_Distance(
-                  ST_SetSRID(ST_MakePoint(longitude, latitude), 4326),
-                  ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326)
-                ) AS distance
-          FROM volunteering_voltastics_with_classification
-        ), scored AS (
-          SELECT *,
-                (${rankingWeightCosineSimilarity} * cosine_similarity) + 
-                (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
-          FROM calculations
-        )
-        SELECT *
-        FROM scored
-        ORDER BY weighted_score DESC
-        OFFSET ${offset}
-        LIMIT ${limit};
-      `;
-      return result.rows.map(toEngagement(this.imageProxyBaseUrl));
-    }
-
-    // special syntax for Denos postgres client, resulting in an SQL injection-safe prepared statement
-    // see https://deno-postgres.com/#/?id=template-strings
-    const result = await this.client.queryObject<VolunteeringDBRow>`
-    WITH vector_matches AS (
-      SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
-      FROM volunteering_voltastics_with_classification
-      ORDER BY cosine_similarity DESC
+    return await this.client.queryObject<VolunteeringDBRow>`
+      WITH calculations AS (
+        SELECT *,
+              1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
+              ST_Distance(
+                ST_SetSRID(ST_MakePoint(longitude, latitude), 4326),
+                ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326)
+              ) AS distance
+        FROM volunteering_voltastics_with_classification
+      ), scored AS (
+        SELECT *,
+              (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+              (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
+        FROM calculations
+      )
+      SELECT *
+      FROM scored
+      ORDER BY weighted_score DESC
       OFFSET ${offset}
-      LIMIT ${limit}
-    )
-    SELECT *
-    FROM vector_matches;
-  `;
-    return result.rows.map(toEngagement(this.imageProxyBaseUrl));
+      LIMIT ${limit};
+    `;
+  }
+
+  private async queryRecosBasedOnLocation(
+    offset: number,
+    limit: number,
+    geoLocation: GeoLocation,
+  ): Promise<QueryObjectResult<VolunteeringDBRow>> {
+    return await this.client.queryObject<VolunteeringDBRow>`
+      SELECT *, 
+             ST_Distance(
+               ST_SetSRID(ST_MakePoint(longitude, latitude), 4326),
+               ST_SetSRID(ST_MakePoint(${geoLocation.lon.toString()}, ${geoLocation.lat.toString()}), 4326)
+             ) AS distance
+      FROM volunteering_voltastics_with_classification
+      ORDER BY distance ASC
+      OFFSET ${offset}
+      LIMIT ${limit};
+    `;
   }
 }
