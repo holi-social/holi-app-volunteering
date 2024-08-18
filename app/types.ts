@@ -19,6 +19,10 @@ export type Engagement = {
   location?: string;
   latitude?: number | null;
   longitude?: number | null;
+
+  matchedTopics?: string[];
+  matchedSkills?: string[];
+  matchedGeoLocationDistanceInMeters?: number;
 };
 
 export type Category = {

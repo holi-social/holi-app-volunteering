@@ -47,8 +47,15 @@ const typeDefs = `
       location: String
       latitude: Float
       longitude: Float
+      
+      """
+      If this engagement is part of a recommendation query response, the fields below contain hints why this engagement 
+      was recommended.
+      """
+      matchedTopics: [String]
+      matchedSkills: [String]
+      matchedGeoLocationDistanceInMeters: Float
     }
-    
 
     type Category {
       name: String!
@@ -72,7 +79,6 @@ const typeDefs = `
     type CitiesResponse {
       data: [City]!
     }
-
   
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
