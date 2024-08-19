@@ -309,11 +309,15 @@ export class VolunteeringDB {
     skills: string[],
     geolocationId?: string,
   ): Promise<QueryObjectResult<VolunteeringDBRow>> {
+    const beforeResolve = Date.now();
     const geoLocation = geolocationId
       ? await this.resolveGeoLocation(geolocationId)
         .then((geoLocation) => {
+          const afterResolve = Date.now();
           logger.debug(
-            `Successfully resolved ${
+            `[${
+              (afterResolve - beforeResolve).toString().padStart(4, " ")
+            } ms] Successfully resolved ${
               JSON.stringify(geoLocation)
             } for geolocationId=${geolocationId}`,
           );
@@ -331,6 +335,19 @@ export class VolunteeringDB {
         })
       : undefined;
 
+    const beforeQuery = Date.now();
+    const logQueryDuration = (
+      result: QueryObjectResult<VolunteeringDBRow>,
+    ): QueryObjectResult<VolunteeringDBRow> => {
+      const afterQuery = Date.now();
+      logger.debug(
+        `[${
+          (afterQuery - beforeQuery).toString().padStart(4, " ")
+        } ms] Successfully retrieved ${result.rows.length} recommendations from DB`,
+      );
+      return result;
+    };
+
     if (geoLocation && (topics.length > 0 || skills.length > 0)) {
       return this.queryRecosBasedOnTopicsSkillsAndLocation(
         offset,
@@ -338,16 +355,18 @@ export class VolunteeringDB {
         topics,
         skills,
         geoLocation,
-      );
+      ).then(logQueryDuration);
     } else if (geoLocation) {
-      return this.queryRecosBasedOnLocation(offset, limit, geoLocation);
+      return this.queryRecosBasedOnLocation(offset, limit, geoLocation).then(
+        logQueryDuration,
+      );
     } else if (topics.length > 0 || skills.length > 0) {
       return this.queryRecosBasedOnTopicsAndSkills(
         offset,
         limit,
         topics,
         skills,
-      );
+      ).then(logQueryDuration);
     } else {
       return Promise.reject(
         "It is required to provide at least one of (topics, skills, or location) in order to retrieve recommendations",
@@ -394,22 +413,27 @@ export class VolunteeringDB {
     );
     const rankingWeightCosineSimilarity = 0.7; // Weight for cosine similarity
     const rankingWeightDistance = 0.3; // Weight for proximity
-    const maxAcceptableDistance = 50000; // in meters (e.g., 50 km)
+    const maxDistanceInMeters = 50_000; // in meters (e.g., 50 km)
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
     const { lat, lon } = geoLocation;
 
+    // Useful knowledge
+    // - PostGIS uses lon, lat (NOT lat, lon)
+    // - <#> uses index scans if used in an ORDER BY clause, ST_Distance does not
+    // - Database stores in GPS-Coordinates (SRID 4326)
+    // - In order to calculate a distance in meters, a geometry needs to be projected by transforming using
+    //   ST_Transform(geom, 3857) where we use the SRID 3857 for Pseudo-Mercator
     return await this.client.queryObject<VolunteeringDBRow>`
       WITH calculations AS (
         SELECT *,
               1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
-              ST_Transform(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326), 3857) <#>
-              ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
+              ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
         FROM volunteering_voltastics_with_classification
         WHERE longitude IS NOT NULL AND latitude IS NOT NULL
       ), scored AS (
         SELECT *,
               (${rankingWeightCosineSimilarity} * cosine_similarity) + 
-              (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
+              (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxDistanceInMeters})) / ${maxDistanceInMeters}) AS weighted_score
         FROM calculations
       )
       SELECT *
@@ -430,12 +454,11 @@ export class VolunteeringDB {
         JSON.stringify({ offset, limit, geoLocation })
       }`,
     );
+    const { lat, lon } = geoLocation;
     return await this.client.queryObject<VolunteeringDBRow>`
       SELECT *, 
-             ST_Transform(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326), 3857) <#>
-             ST_Transform(ST_SetSRID(ST_MakePoint(${geoLocation.lon.toString()}, ${geoLocation.lat.toString()}), 4326), 3857) AS distance_in_meters
+             ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
       FROM volunteering_voltastics_with_classification
-      WHERE longitude IS NOT NULL AND latitude IS NOT NULL
       ORDER BY distance_in_meters ASC
       OFFSET ${offset}
       LIMIT ${limit};
