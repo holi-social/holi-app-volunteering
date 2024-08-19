@@ -196,11 +196,15 @@ export class VolunteeringDB {
     config: ServerConfig,
     params: EngagementRecommendationsParameters,
   ): Promise<EngagementsResponse> {
+    const beforeResolve = Date.now();
     const latLng: LatLng | undefined = params.geolocationId
       ? await resolveLatLng(config.geoAPIEndpointUrl, params.geolocationId)
         .then((latLng) => {
+          const afterResolve = Date.now();
           console.debug(
-            `Successfully resolved ${
+            `[${
+              (afterResolve - beforeResolve).toString().padStart(4, " ")
+            } ms] Successfully resolved ${
               JSON.stringify(latLng)
             } for geolocationId=${params.geolocationId}`,
           );
@@ -212,6 +216,7 @@ export class VolunteeringDB {
           return undefined;
         })
       : undefined;
+    const beforeQuery = Date.now();
     const recos = await this.queryRecommendations(
       params.topics,
       params.skills,
@@ -223,6 +228,12 @@ export class VolunteeringDB {
         console.error("Error executing query", reason);
         throw reason;
       });
+    const afterQuery = Date.now();
+    console.debug(
+      `[${
+        (afterQuery - beforeQuery).toString().padStart(4, " ")
+      } ms] Successfully retrieved ${recos.length} recommendations from DB`,
+    );
     return Promise.resolve({
       totalResults: recos.length,
       data: recos,
@@ -242,25 +253,29 @@ export class VolunteeringDB {
     // Define weight parameters
     const rankingWeightCosineSimilarity = 0.7; // Weight for cosine similarity
     const rankingWeightDistance = 0.3; // Weight for proximity
-    const maxAcceptableDistance = 50000; // in meters (e.g., 50 km)
+    const maxDistanceInMeters = 50_000; // in meters (e.g., 50 km)
 
     await this.client.queryObject(`CREATE EXTENSION IF NOT EXISTS postgis;`);
 
     if (latLng) {
       const { lat, lng } = latLng;
+      // Useful knowledge
+      // - PostGIS uses lon, lat (NOT lat, lon)
+      // - <#> uses index scans if used in an ORDER BY clause, ST_Distance does not
+      // - Database stores in GPS-Coordinates (SRID 4326)
+      // - In order to calculate a distance in meters, a geometry needs to be projected by transforming using
+      //   ST_Transform(geom, 3857) where we use the SRID 3857 for Pseudo-Mercator
       const result = await this.client.queryObject<VolunteeringDBRow>`
         WITH calculations AS (
           SELECT *,
                 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
-                ST_Distance(
-                  ST_SetSRID(ST_MakePoint(longitude, latitude), 4326),
-                  ST_SetSRID(ST_MakePoint(${lng.toString()}, ${lat.toString()}), 4326)
-                ) AS distance
+                ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lng.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
           FROM volunteering_voltastics_with_classification
+          WHERE longitude IS NOT NULL AND latitude IS NOT NULL
         ), scored AS (
           SELECT *,
                 (${rankingWeightCosineSimilarity} * cosine_similarity) + 
-                (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
+                (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxDistanceInMeters})) / ${maxDistanceInMeters}) AS weighted_score
           FROM calculations
         )
         SELECT *
