@@ -21,6 +21,8 @@ import {
 } from "./voltastics.ts";
 import { logger } from "./logging.ts";
 import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
+import { resolveGeoLocationViaGeoAPI } from "./geo_api_client.ts";
+import { Client } from "https://deno.land/x/postgres@v0.19.3/client.ts";
 
 const typeDefs = `
     type Organizer {
@@ -135,7 +137,7 @@ const createResolvers = (
     ): Promise<EngagementsResponse> =>
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
-        : volunteeringDB.findRecommendations(config, parameters),
+        : volunteeringDB.findRecommendations(parameters),
   },
   Mutation: {
     trackEngagementView: (
@@ -185,9 +187,28 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
       }),
     ]
     : [];
+  const client = new Client({
+    hostname: config.volunteeringDB.hostname,
+    port: config.volunteeringDB.port,
+    database: config.volunteeringDB.database,
+    user: config.volunteeringDB.username,
+    password: config.volunteeringDB.password,
+    controls: {
+      debug: {
+        queries: false,
+        notices: false,
+        results: false,
+        queryInError: true,
+      },
+    },
+    connection: {
+      attempts: config.volunteeringDB.connectionAttempts,
+    },
+  });
   const volunteeringDB = new VolunteeringDB(
-    config.volunteeringDB,
+    client,
     config.imageProxyBaseUrl,
+    resolveGeoLocationViaGeoAPI(config.geoAPIEndpointUrl),
   );
   const resolvers = createResolvers(config, volunteeringDB);
   return createYoga({
