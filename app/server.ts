@@ -21,6 +21,8 @@ import {
 } from "./voltastics.ts";
 import { logger } from "./logging.ts";
 import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
+import { resolveGeoLocationViaGeoAPI } from "./geo_api_client.ts";
+import { Client } from "https://deno.land/x/postgres@v0.19.3/client.ts";
 
 const typeDefs = `
     type Organizer {
@@ -75,7 +77,7 @@ const typeDefs = `
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
         engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse!
-        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!], skills: [String!], location: GeoJSON): EngagementsResponse!
+        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!], skills: [String!], geolocationId: String): EngagementsResponse!
         engagement(id: String!): Engagement
         categories: CategoriesResponse!
         engagements(offset: Int! = 0, limit: Int! = 10, location: String, category: String, longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse! @deprecated(reason: "Use engagementOpportunities instead, as its support will be discontinued after 1.5.1.")
@@ -167,6 +169,7 @@ export interface ServerConfig {
   imageProxyBaseUrl: string;
   fake: boolean; // For local development. If set, the API returns dummy data
   volunteeringDB: VolunteeringDBConfig;
+  geoAPIEndpointUrl: string;
 }
 
 export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
@@ -184,9 +187,28 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
       }),
     ]
     : [];
+  const client = new Client({
+    hostname: config.volunteeringDB.hostname,
+    port: config.volunteeringDB.port,
+    database: config.volunteeringDB.database,
+    user: config.volunteeringDB.username,
+    password: config.volunteeringDB.password,
+    controls: {
+      debug: {
+        queries: false,
+        notices: false,
+        results: false,
+        queryInError: true,
+      },
+    },
+    connection: {
+      attempts: config.volunteeringDB.connectionAttempts,
+    },
+  });
   const volunteeringDB = new VolunteeringDB(
-    config.volunteeringDB,
+    client,
     config.imageProxyBaseUrl,
+    resolveGeoLocationViaGeoAPI(config.geoAPIEndpointUrl),
   );
   const resolvers = createResolvers(config, volunteeringDB);
   return createYoga({

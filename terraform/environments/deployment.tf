@@ -114,6 +114,10 @@ resource "google_cloud_run_service" "volunteering_api" {
             }
           }
         }
+        env {
+          name = "GEO_API_ENDPOINT_URL"
+          value = data.terraform_remote_state.holi_geo_api_environments_state.outputs.api_endpoint_url
+        }
         resources {
           limits = {
             # cpu can only be scaled down to 1000m as long as container_concurrency is set to != 1
@@ -136,7 +140,7 @@ resource "google_cloud_run_service" "volunteering_api" {
         # Use the VPC Connector
         "run.googleapis.com/vpc-access-connector" = data.terraform_remote_state.holi_infra_state.outputs.vpc_access_connector_name
         # possible values: all-traffic/private-ranges-only(default) https://cloud.google.com/sdk/gcloud/reference/run/services/update#--vpc-egress
-        "run.googleapis.com/vpc-access-egress" = "private-ranges-only"
+        "run.googleapis.com/vpc-access-egress" = "all-traffic"
       }
     }
   }

@@ -143,6 +143,7 @@ const serverConfigMock: ServerConfig = {
     username: "admin",
     connectionAttempts: 10,
   },
+  geoAPIEndpointUrl: "fakeUrl",
 };
 
 const noCacheServerConfig = {
@@ -160,6 +161,7 @@ const noCacheServerConfig = {
     username: "admin",
     connectionAttempts: 10,
   },
+  geoAPIEndpointUrl: "fakeUrl",
 };
 
 describe("voltastics", () => {
