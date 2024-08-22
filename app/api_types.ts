@@ -31,7 +31,6 @@ export enum ApiRoutes {
   SEARCH_ENGAGEMENTS = "searchengagement",
   TRACK_VIEW = "trackview",
   ENGAGEMENT = "engagement",
-  CITIES = "cities",
   USES = "uses",
 }
 
@@ -40,6 +39,3 @@ export enum ApiDefaults {
   MIN_RADIUS = 5,
   MAX_RADIUS = 50, // The largest radius in kilometers that the Voltastics API is capable of handling.
 }
-
-// TODO: Delete the following when app version 1.5.1 is no longer supported.
-export type ApiCitiesResponse = string[];

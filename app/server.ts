@@ -1,24 +1,15 @@
 import {
   CategoriesResponse,
-  CitiesResponse,
   EngagementOpportunitiesParameters,
   EngagementParameters,
   EngagementRecommendationsParameters,
   EngagementResponse,
-  EngagementsParameters,
   EngagementsResponse,
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
-import {
-  fetchCategories,
-  fetchCities,
-  fetchEngagement,
-  fetchEngagementOpportunities,
-  fetchEngagements,
-  trackEngagementView,
-} from "./voltastics.ts";
+import { fetchCategories, fetchEngagement, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
 import { logger } from "./logging.ts";
 import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
 import { GeoAPIClient } from "./geo_api_client.ts";
@@ -79,14 +70,6 @@ const typeDefs = `
     
     scalar GeoJSON
 
-    type City {
-      name: String!
-    }
-
-    type CitiesResponse {
-      data: [City]!
-    }
-  
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
         engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse!
@@ -99,10 +82,6 @@ const typeDefs = `
         engagement(id: String!): Engagement
         
         categories: CategoriesResponse!
-        
-        engagements(offset: Int! = 0, limit: Int! = 10, location: String, category: String, longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse! @deprecated(reason: "Use engagementOpportunities instead, as its support will be discontinued after 1.5.1.")
-        
-        cities: CitiesResponse! @deprecated(reason: "It will no longer be supported after 1.5.1.")  
     }
 
     type Mutation {
@@ -130,16 +109,6 @@ const createResolvers = (
       // deno-lint-ignore no-explicit-any
       _parent: any,
     ): Promise<CategoriesResponse> => config.fake ? Promise.resolve({ data: [] }) : fetchCategories(config.voltastics),
-    engagements: (
-      // deno-lint-ignore no-explicit-any
-      _parent: any,
-      parameters: EngagementsParameters,
-    ): Promise<EngagementsResponse> =>
-      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : fetchEngagements(config)(parameters),
-    cities: (
-      // deno-lint-ignore no-explicit-any
-      _parent: any,
-    ): Promise<CitiesResponse> => config.fake ? Promise.resolve({ data: [] }) : fetchCities(config.voltastics),
     engagementRecommendations: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
@@ -187,8 +156,6 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
           "Query.engagementOpportunities": config.cacheTtlMsVoltastics,
           "Query.engagement": config.cacheTtlMsVoltastics,
           "Query.categories": config.cacheTtlMsVoltastics,
-          "Query.engagements": config.cacheTtlMsVoltastics,
-          "Query.cities": config.cacheTtlMsVoltastics,
         },
       }),
     ]

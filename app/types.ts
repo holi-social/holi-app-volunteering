@@ -84,20 +84,3 @@ export type GeolocationGeoJSON = {
   properties: GeolocationCoordinates;
   geometry: GeolocationGeometry;
 };
-
-// TODO: Delete the following when app version 1.5.1 is no longer supported.
-export type City = {
-  name: string;
-};
-
-export type CitiesResponse = { data: City[] };
-
-export type EngagementsParameters = {
-  limit: number;
-  offset: number;
-  latitude?: number;
-  longitude?: number;
-  radiusKm?: number;
-  location?: string;
-  category?: string;
-};
