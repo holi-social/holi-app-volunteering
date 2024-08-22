@@ -268,6 +268,12 @@ const toEngagement = (
   };
 };
 
+const extractTotalResultCount = (
+  queryResult: QueryObjectResult<VolunteeringDBRow>,
+) =>
+  (queryResult.rows.length ? Number(queryResult.rows[0].total_results) : queryResult.rowCount) ??
+    0;
+
 export class VolunteeringDB {
   private client: Client;
   private readonly imageProxyBaseUrl: string;
@@ -300,7 +306,7 @@ export class VolunteeringDB {
       toEngagement(this.imageProxyBaseUrl, topics, skills),
     );
     return Promise.resolve({
-      totalResults: recos.length,
+      totalResults: extractTotalResultCount(result),
       data: recos,
     });
   }
@@ -349,7 +355,6 @@ export class VolunteeringDB {
       return result;
     };
 
-    // TODO(SF) add row count to all queries for pagination
     if (geolocationCoordinates && (topics.length > 0 || skills.length > 0)) {
       return this.queryRecosBasedOnTopicsSkillsAndLocation(
         offset,
@@ -395,11 +400,11 @@ export class VolunteeringDB {
         SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
         FROM volunteering_voltastics_with_classification
         ORDER BY cosine_similarity DESC
-        OFFSET ${offset}
-        LIMIT ${limit}
       )
-      SELECT *
-      FROM vector_matches;
+      SELECT *, count(*) OVER() AS total_results
+      FROM vector_matches
+      OFFSET ${offset}
+      LIMIT ${limit};
     `;
   }
 
@@ -440,7 +445,7 @@ export class VolunteeringDB {
               (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxDistanceInMeters})) / ${maxDistanceInMeters}) AS weighted_score
         FROM calculations
       )
-      SELECT *
+      SELECT *, count(*) OVER() AS total_results
       FROM scored
       ORDER BY weighted_score DESC
       OFFSET ${offset}
@@ -458,7 +463,8 @@ export class VolunteeringDB {
     );
     const { lat, lon } = geolocationCoordinates;
     return await this.client.queryObject<VolunteeringDBRow>`
-      SELECT *, 
+      SELECT *,
+             count(*) OVER() AS total_results,
              ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
       FROM volunteering_voltastics_with_classification
       ORDER BY distance_in_meters ASC
@@ -509,10 +515,11 @@ export class VolunteeringDB {
     const binaryQueryVector = queryVector.map((value) => value > 0 ? "1" : "0")
       .join("");
     const emptyBinaryQueryVector = "0".repeat(EMBEDDING_DIMENSIONS);
+    const beforeQuery = Date.now();
 
     // Filtering engagements:
     // - Precomputed `binary_embedding` is a bit string marking matching topics and skills
-    // - Unset bits in `binary_embedding` for terms that are not part of the query using bitwise AND => If at least one set bit remains, it matches the query (check by comparing to empty bit string, as it's too long for integer conversion)
+    // - Unset bits in `binary_embedding` for terms that are not part of the query using bitwise AND => If at least one set bit remains, it matches the query (checked by comparing to empty bit string, as it's too long for integer conversion)
     // - Filter by geolocation by checking if coordinates are inside the given geolocation's GeoJSON geometry
     // - Sort results using cosine_similarity
     const result = await this.client.queryObject<VolunteeringDBRow>`
@@ -541,8 +548,13 @@ export class VolunteeringDB {
       LIMIT ${limit};
     `;
 
-    const totalResults = (result.rows.length ? Number(result.rows[0].total_results) : result.rowCount) ??
-      0;
+    const afterQuery = Date.now();
+    const totalResults = extractTotalResultCount(result);
+    logger.debug(
+      `[${
+        (afterQuery - beforeQuery).toString().padStart(4, " ")
+      } ms] Successfully fetched ${result.rows.length}/${totalResults} filtered engagements from DB`,
+    );
 
     return {
       totalResults,
