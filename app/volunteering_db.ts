@@ -1,6 +1,12 @@
 import type { QueryObjectResult } from "./deps.ts";
 import { Client } from "./deps.ts";
-import { Engagement, EngagementRecommendationsParameters, EngagementsResponse } from "./types.ts";
+import { GeoAPIClient } from "./geo_api_client.ts";
+import {
+  Engagement,
+  EngagementRecommendationsParameters,
+  EngagementsResponse,
+  GeolocationCoordinates,
+} from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
 import { logger } from "./logging.ts";
 
@@ -256,28 +262,19 @@ const toEngagement = (
   };
 };
 
-export type GeoLocation = {
-  lat: number;
-  lon: number;
-};
-
-export type GeoLocationResolver = (
-  geoLocationId: string,
-) => Promise<GeoLocation>;
-
 export class VolunteeringDB {
   private client: Client;
   private readonly imageProxyBaseUrl: string;
-  private resolveGeoLocation: GeoLocationResolver;
+  private geoAPIClient: GeoAPIClient;
 
   constructor(
     client: Client,
     imageProxyBaseUrl: string,
-    resolveGeoLocation: GeoLocationResolver,
+    geoAPIClient: GeoAPIClient,
   ) {
     this.client = client;
     this.imageProxyBaseUrl = imageProxyBaseUrl;
-    this.resolveGeoLocation = resolveGeoLocation;
+    this.geoAPIClient = geoAPIClient;
   }
 
   async findRecommendations(
@@ -310,16 +307,16 @@ export class VolunteeringDB {
     geolocationId?: string,
   ): Promise<QueryObjectResult<VolunteeringDBRow>> {
     const beforeResolve = Date.now();
-    const geoLocation = geolocationId
-      ? await this.resolveGeoLocation(geolocationId)
-        .then((geoLocation) => {
+    const geolocationCoordinates = geolocationId
+      ? await this.geoAPIClient.resolveCoordinates(geolocationId)
+        .then((coordinates) => {
           const afterResolve = Date.now();
           logger.debug(
             `[${(afterResolve - beforeResolve).toString().padStart(4, " ")} ms] Successfully resolved ${
-              JSON.stringify(geoLocation)
+              JSON.stringify(coordinates)
             } for geolocationId=${geolocationId}`,
           );
-          return geoLocation;
+          return coordinates;
         })
         .catch((error) => {
           logger.warn(error);
@@ -346,16 +343,20 @@ export class VolunteeringDB {
       return result;
     };
 
-    if (geoLocation && (topics.length > 0 || skills.length > 0)) {
+    if (geolocationCoordinates && (topics.length > 0 || skills.length > 0)) {
       return this.queryRecosBasedOnTopicsSkillsAndLocation(
         offset,
         limit,
         topics,
         skills,
-        geoLocation,
+        geolocationCoordinates,
       ).then(logQueryDuration);
-    } else if (geoLocation) {
-      return this.queryRecosBasedOnLocation(offset, limit, geoLocation).then(
+    } else if (geolocationCoordinates) {
+      return this.queryRecosBasedOnLocation(
+        offset,
+        limit,
+        geolocationCoordinates,
+      ).then(
         logQueryDuration,
       );
     } else if (topics.length > 0 || skills.length > 0) {
@@ -400,16 +401,18 @@ export class VolunteeringDB {
     limit: number,
     topics: string[],
     skills: string[],
-    geoLocation: GeoLocation,
+    geolocationCoordinates: GeolocationCoordinates,
   ): Promise<QueryObjectResult<VolunteeringDBRow>> {
     logger.debug(
-      `queryRecosBasedOnTopicsSkillsAndLocation ${JSON.stringify({ offset, limit, topics, skills, geoLocation })}`,
+      `queryRecosBasedOnTopicsSkillsAndLocation ${
+        JSON.stringify({ offset, limit, topics, skills, geolocationCoordinates })
+      }`,
     );
     const rankingWeightCosineSimilarity = 0.7; // Weight for cosine similarity
     const rankingWeightDistance = 0.3; // Weight for proximity
     const maxDistanceInMeters = 50_000; // in meters (e.g., 50 km)
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
-    const { lat, lon } = geoLocation;
+    const { lat, lon } = geolocationCoordinates;
 
     // Useful knowledge
     // - PostGIS uses lon, lat (NOT lat, lon)
@@ -441,12 +444,12 @@ export class VolunteeringDB {
   private async queryRecosBasedOnLocation(
     offset: number,
     limit: number,
-    geoLocation: GeoLocation,
+    geolocationCoordinates: GeolocationCoordinates,
   ): Promise<QueryObjectResult<VolunteeringDBRow>> {
     logger.debug(
-      `queryRecosBasedOnLocation ${JSON.stringify({ offset, limit, geoLocation })}`,
+      `queryRecosBasedOnLocation ${JSON.stringify({ offset, limit, geolocationCoordinates })}`,
     );
-    const { lat, lon } = geoLocation;
+    const { lat, lon } = geolocationCoordinates;
     return await this.client.queryObject<VolunteeringDBRow>`
       SELECT *, 
              ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters

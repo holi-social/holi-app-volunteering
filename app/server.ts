@@ -21,7 +21,7 @@ import {
 } from "./voltastics.ts";
 import { logger } from "./logging.ts";
 import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
-import { resolveGeoLocationViaGeoAPI } from "./geo_api_client.ts";
+import { GeoAPIClient } from "./geo_api_client.ts";
 import { Client } from "https://deno.land/x/postgres@v0.19.3/client.ts";
 
 const typeDefs = `
@@ -211,10 +211,11 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
       attempts: config.volunteeringDB.connectionAttempts,
     },
   });
+  const geoAPIClient = new GeoAPIClient(config.geoAPIEndpointUrl);
   const volunteeringDB = new VolunteeringDB(
     client,
     config.imageProxyBaseUrl,
-    resolveGeoLocationViaGeoAPI(config.geoAPIEndpointUrl),
+    geoAPIClient,
   );
   const resolvers = createResolvers(config, volunteeringDB);
   return createYoga({

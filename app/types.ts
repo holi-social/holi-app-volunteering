@@ -75,13 +75,13 @@ export type GeolocationGeometry = {
   coordinates: number[] | number[][] | number[][][] | number[][][][];
 };
 
-export type Place = {
-  lon: number;
+export type GeolocationCoordinates = {
   lat: number;
+  lon: number;
 };
 
 export type GeolocationGeoJSON = {
-  properties: Place;
+  properties: GeolocationCoordinates;
   geometry: GeolocationGeometry;
 };
 

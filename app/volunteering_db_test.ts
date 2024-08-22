@@ -1,13 +1,17 @@
-import type { Spy } from "./dev_deps.ts";
-import { assertEquals, assertRejects, assertSpyCall, assertSpyCalls, describe, it, spy } from "./dev_deps.ts";
-import { exportedForTesting, GeoLocationResolver, VolunteeringDB } from "./volunteering_db.ts";
+import {
+  assertEquals,
+  assertRejects,
+  assertSpyCall,
+  assertSpyCalls,
+  describe,
+  it,
+  returnsNext,
+  Stub,
+  stub,
+} from "./dev_deps.ts";
+import { exportedForTesting, VolunteeringDB } from "./volunteering_db.ts";
 import { Client } from "./deps.ts";
-
-type ResolveLocationSpy = Spy<
-  unknown,
-  [_geoLocationId: string],
-  Promise<{ lat: number; lon: number }>
->;
+import { GeoAPIClient } from "./geo_api_client.ts";
 
 // taken from https://stackoverflow.com/a/2450976 ("Fisher-Yates Shuffle")
 function shuffle<A>(array: A[]): A[] {
@@ -27,30 +31,38 @@ function shuffle<A>(array: A[]): A[] {
   return array;
 }
 
-const succeedingGeoLocationResolver: GeoLocationResolver = (
-  _geoLocationId: string,
-) => Promise.resolve({ lat: 123, lon: 321 });
-const failingGeoLocationResolver: GeoLocationResolver = (
-  _geoLocationId: string,
-) => Promise.reject("boom!");
+const testCoordinates = { lat: 123, lon: 321 };
+const testGeometry = {
+  type: "Polygon",
+  "coordinates": [[[3.9265487, 52.576948399], [13.9304862, 52.574110199]]],
+};
 
 const withMockedDependencies = (
-  geoLocationResolver: GeoLocationResolver,
   test: (
     vDB: VolunteeringDB,
-    resolveLocationSpy: ResolveLocationSpy,
+    geoApiClient: GeoAPIClient,
   ) => unknown | Promise<unknown>,
 ) => {
-  const geoLocationResolverSpy = spy(geoLocationResolver);
   const mockClient = {
     queryObject: () => Promise.resolve({ rows: [] }),
   } as unknown as Client;
+  const mockedGeoApiClient = {} as unknown as GeoAPIClient;
+  stub(
+    mockedGeoApiClient,
+    "resolveCoordinates",
+    returnsNext([Promise.resolve(testCoordinates)]),
+  );
+  stub(
+    mockedGeoApiClient,
+    "resolveGeometry",
+    returnsNext([Promise.resolve(testGeometry)]),
+  );
   const volunteeringDB = new VolunteeringDB(
     mockClient,
     "mock-image-proxy-base-url",
-    geoLocationResolverSpy,
+    mockedGeoApiClient,
   );
-  test(volunteeringDB, geoLocationResolverSpy);
+  test(volunteeringDB, mockedGeoApiClient);
 };
 
 describe("VolunteeringDB", () => {
@@ -207,8 +219,7 @@ describe("VolunteeringDB", () => {
   });
   it("resolves latitude/longitude using the GeoAPI client when geoLocationId is given", () => {
     withMockedDependencies(
-      succeedingGeoLocationResolver,
-      (volunteeringDB, resolveLocationSpy) => {
+      (volunteeringDB, geoAPIClient) => {
         volunteeringDB.findRecommendations({
           limit: 10,
           offset: 0,
@@ -216,30 +227,34 @@ describe("VolunteeringDB", () => {
           skills: [],
           geolocationId: "mock-geolocation-id",
         });
-        assertSpyCall(resolveLocationSpy, 0, {
+        assertSpyCall(geoAPIClient.resolveCoordinates as Stub, 0, {
           args: ["mock-geolocation-id"],
         });
       },
     );
   });
-  it("does not resolve latitude/longitude when geoLocationId is not given", () => {
+  it("does not resolve latitude/longitude when geolocationId is not given", () => {
     withMockedDependencies(
-      succeedingGeoLocationResolver,
-      (volunteeringDB, resolveLocationSpy) => {
+      (volunteeringDB, geoAPIClient) => {
         volunteeringDB.findRecommendations({
           limit: 10,
           offset: 0,
           topics: ["agriculture-food"],
           skills: [],
         });
-        assertSpyCalls(resolveLocationSpy, 0);
+        assertSpyCalls(geoAPIClient.resolveCoordinates as Stub, 0);
       },
     );
   });
   it("falls back to recommend based only on topics and skills if given and geo location resolution fails", () => {
     withMockedDependencies(
-      failingGeoLocationResolver,
-      async (volunteeringDB, _resolveLocationSpy) => {
+      async (volunteeringDB, geoAPIClient) => {
+        stub(
+          geoAPIClient,
+          "resolveCoordinates",
+          returnsNext([Promise.reject("boom!")]),
+        );
+
         const result = await volunteeringDB.findRecommendations({
           limit: 10,
           offset: 0,
@@ -254,8 +269,12 @@ describe("VolunteeringDB", () => {
   });
   it("fails with error message if no topics and skills are given and geo location resolution fails", () => {
     withMockedDependencies(
-      failingGeoLocationResolver,
-      async (volunteeringDB, _resolveLocationSpy) => {
+      async (volunteeringDB, geoAPIClient) => {
+        stub(
+          geoAPIClient,
+          "resolveCoordinates",
+          returnsNext([Promise.reject("boom!")]),
+        );
         await assertRejects(
           () =>
             volunteeringDB.findRecommendations({
