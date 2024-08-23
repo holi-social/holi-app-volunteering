@@ -86,13 +86,13 @@ describe("VolunteeringDB", () => {
       0,0,0,0,0,0,0,0,0,0,
       0,0,0,0,0,0,0,0,0,1.0,
     ]
-    // ordered by degree of match descending (best matches first)
+    // ordered by confidence DESC with queried for terms first
     const expectedMatchedTopics = [
       "agriculture-food", // first item (index 0)
       "water-ocean", // last item  (index 27)
       "disabilities-inclusion", // tenth item (index 9)
     ];
-    // ordered by degree of match descending (best matches first)
+    // ordered by confidence DESC with queried for terms first
     const expectedMatchedSkills = [
       "writing-translation", // last item  (index 49)
       "conflict-management", // tenth item (index 9)
@@ -124,12 +124,12 @@ describe("VolunteeringDB", () => {
       0,0,0,0,0,0,0,0,0,0,
       0,0,0,0,0,0,0,0,0,1.0,
     ]
-    // ordered by degree of match descending (best matches first)
+    // ordered by confidence DESC with queried for terms first
     const expectedMatchedTopics = [
       "agriculture-food", // first item (index 0)
       "water-ocean", // last item  (index 27)
     ];
-    // ordered by degree of match descending (best matches first)
+    // ordered by confidence DESC with queried for terms first
     const expectedMatchedSkills = [
       "writing-translation", // last item  (index 49)
       "conflict-management", // tenth item (index 9)
@@ -160,14 +160,14 @@ describe("VolunteeringDB", () => {
       0,0,0,0,0,0,0,0,0,0,
       0,0,0,0,0,0,0,0,0,1.0,
     ]
-    // ordered by degree of match descending (best matches first)
+    // ordered by confidence DESC with queried for terms first
     const expectedMatchedTopics = [
       "disabilities-inclusion", // tenth item (index 9)
       "agriculture-food", // first item (index 0)
       "water-ocean", // last item (
       "urban-rural-development",
     ];
-    // ordered by degree of match descending (best matches first)
+    // ordered by confidence DESC with queried for terms first
     const expectedMatchedSkills = [
       "writing-translation", // last item  (index 49)
       "conflict-management", // tenth item (index 9)
