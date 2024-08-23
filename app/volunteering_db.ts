@@ -166,17 +166,17 @@ const sortMatches = (
   queriedTerms: string[],
   matchedTermsWithConfidence: [string, number][],
 ): [string, number][] => {
-  const comparator = (queried: string[]) =>
-  (
-    a: [string, number],
-    b: [string, number],
-  ): number => {
-    if (queried.includes(a[0]) && queried.includes(b[0])) return b[1] - a[1]; // both terms were queried for, rank relative to another
-    else if (queried.includes(a[0])) return -1; // `a` was queried for, rank a higher
-    else if (queried.includes(b[0])) return 1; // `b` was queried for, rank b higher
-    else return b[1] - a[1]; // both terms were not queried for, rank relative to another
-  };
-  return matchedTermsWithConfidence.sort(comparator(queriedTerms));
+  const byConfidenceDesc = (a: [string, number], b: [string, number]) =>
+    b[1] - a[1];
+
+  return [
+    ...matchedTermsWithConfidence.filter(([topic, _confidence]) =>
+      queriedTerms.includes(topic)
+    ).sort(byConfidenceDesc),
+    ...matchedTermsWithConfidence.filter(([topic, _confidence]) =>
+      !queriedTerms.includes(topic)
+    ).sort(byConfidenceDesc),
+  ];
 };
 
 const decodeMatchesFromEmbedding = (
@@ -210,19 +210,22 @@ const decodeMatchesFromEmbedding = (
     .filter((matchWithConfidence) =>
       matchWithConfidence[1] >= MATCH_SKILL_CONFIDENCE_THRESHOLD
     );
+
+  const withoutConfidence = (a: [string, number]) => a[0];
   return {
-    matchedTopics: sortMatches(queriedTopics, matchedTopicsWithConfidence).map((
-      a,
-    ) => a[0]),
-    matchedSkills: sortMatches(queriedSkills, matchedSkillsWithConfidence).map((
-      a,
-    ) => a[0]),
+    matchedTopics: sortMatches(queriedTopics, matchedTopicsWithConfidence).map(
+      withoutConfidence,
+    ),
+    matchedSkills: sortMatches(queriedSkills, matchedSkillsWithConfidence).map(
+      withoutConfidence,
+    ),
   };
 };
 
 export const exportedForTesting = {
   recosQueryVector,
   decodeMatchesFromEmbedding,
+  sortMatches,
   TOPICS_VECTOR_INDICES,
   SKILLS_VECTOR_INDICES,
 };
