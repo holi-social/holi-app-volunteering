@@ -14,10 +14,8 @@ type GeoAPIResponse = {
 };
 
 export const resolveGeoLocationViaGeoAPI =
-  (geoAPIEndpointUrl: string) =>
-  async (geolocationId: string): Promise<GeoLocation> => {
-    const graphQLQuery =
-      `{ placeDetails(id: "${geolocationId}") { geolocation } }`;
+  (geoAPIEndpointUrl: string) => async (geolocationId: string): Promise<GeoLocation> => {
+    const graphQLQuery = `{ placeDetails(id: "${geolocationId}") { geolocation } }`;
     const response = await fetch(geoAPIEndpointUrl, {
       "body": JSON.stringify({ query: graphQLQuery }),
       "headers": {
@@ -27,8 +25,7 @@ export const resolveGeoLocationViaGeoAPI =
       "method": "POST",
     });
     const responseJSON = await response.json() as GeoAPIResponse;
-    const { lat, lon } =
-      responseJSON.data?.placeDetails?.geolocation?.properties || {};
+    const { lat, lon } = responseJSON.data?.placeDetails?.geolocation?.properties || {};
     if (lat && lon) {
       return { lat, lon };
     } else {

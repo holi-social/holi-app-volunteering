@@ -215,8 +215,7 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
 };
 
 export const fetchEngagement =
-  (config: ServerConfig) =>
-  ({ id }: EngagementParameters): Promise<EngagementResponse> => {
+  (config: ServerConfig) => ({ id }: EngagementParameters): Promise<EngagementResponse> => {
     const searchParams = new URLSearchParams();
     searchParams.append("id", id);
 
@@ -328,8 +327,7 @@ const buildVoltasticsEngagementsSearchParams = ({
 };
 
 export const fetchEngagements =
-  (config: ServerConfig) =>
-  (params: EngagementsParameters): Promise<EngagementsResponse> => {
+  (config: ServerConfig) => (params: EngagementsParameters): Promise<EngagementsResponse> => {
     const searchParams = buildVoltasticsEngagementsSearchParams(params);
     const start = Date.now();
     logger.info(`fetching engagements from ${config.voltastics.baseUrl}`);

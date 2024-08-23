@@ -1,10 +1,6 @@
 import type { QueryObjectResult } from "./deps.ts";
 import { Client } from "./deps.ts";
-import {
-  Engagement,
-  EngagementRecommendationsParameters,
-  EngagementsResponse,
-} from "./types.ts";
+import { Engagement, EngagementRecommendationsParameters, EngagementsResponse } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
 import { logger } from "./logging.ts";
 
@@ -166,16 +162,13 @@ const sortMatches = (
   queriedTerms: string[],
   matchedTermsWithConfidence: [string, number][],
 ): [string, number][] => {
-  const byConfidenceDesc = (a: [string, number], b: [string, number]) =>
-    b[1] - a[1];
+  const byConfidenceDesc = (a: [string, number], b: [string, number]) => b[1] - a[1];
 
   return [
-    ...matchedTermsWithConfidence.filter(([topic, _confidence]) =>
-      queriedTerms.includes(topic)
-    ).sort(byConfidenceDesc),
-    ...matchedTermsWithConfidence.filter(([topic, _confidence]) =>
-      !queriedTerms.includes(topic)
-    ).sort(byConfidenceDesc),
+    ...matchedTermsWithConfidence.filter(([topic, _confidence]) => queriedTerms.includes(topic)).sort(byConfidenceDesc),
+    ...matchedTermsWithConfidence.filter(([topic, _confidence]) => !queriedTerms.includes(topic)).sort(
+      byConfidenceDesc,
+    ),
   ];
 };
 
@@ -192,24 +185,16 @@ const decodeMatchesFromEmbedding = (
   const skillsOffset = TOPICS_VECTOR_INDICES.size;
   const matchedTopicsWithConfidence = embedding
     .map((confidence, index): [string, number] | null => {
-      return index < skillsOffset
-        ? [TOPICS_VECTOR_INDICES_REVERSE.get(index)!, confidence]
-        : null;
+      return index < skillsOffset ? [TOPICS_VECTOR_INDICES_REVERSE.get(index)!, confidence] : null;
     })
     .filter((matchWithConfidence) => matchWithConfidence != null)
-    .filter((matchWithConfidence) =>
-      matchWithConfidence[1] >= MATCH_TOPIC_CONFIDENCE_THRESHOLD
-    );
+    .filter((matchWithConfidence) => matchWithConfidence[1] >= MATCH_TOPIC_CONFIDENCE_THRESHOLD);
   const matchedSkillsWithConfidence = embedding
     .map((confidence, index): [string, number] | null => {
-      return index >= skillsOffset
-        ? [SKILLS_VECTOR_INDICES_REVERSE.get(index - skillsOffset)!, confidence]
-        : null;
+      return index >= skillsOffset ? [SKILLS_VECTOR_INDICES_REVERSE.get(index - skillsOffset)!, confidence] : null;
     })
     .filter((matchWithConfidence) => matchWithConfidence != null)
-    .filter((matchWithConfidence) =>
-      matchWithConfidence[1] >= MATCH_SKILL_CONFIDENCE_THRESHOLD
-    );
+    .filter((matchWithConfidence) => matchWithConfidence[1] >= MATCH_SKILL_CONFIDENCE_THRESHOLD);
 
   const withoutConfidence = (a: [string, number]) => a[0];
   return {
@@ -296,8 +281,7 @@ export class VolunteeringDB {
   }
 
   async findRecommendations(
-    { offset, limit, topics, skills, geolocationId }:
-      EngagementRecommendationsParameters,
+    { offset, limit, topics, skills, geolocationId }: EngagementRecommendationsParameters,
   ): Promise<EngagementsResponse> {
     const result = await this.queryRecos(
       offset < 0 ? 0 : offset,
@@ -331,9 +315,7 @@ export class VolunteeringDB {
         .then((geoLocation) => {
           const afterResolve = Date.now();
           logger.debug(
-            `[${
-              (afterResolve - beforeResolve).toString().padStart(4, " ")
-            } ms] Successfully resolved ${
+            `[${(afterResolve - beforeResolve).toString().padStart(4, " ")} ms] Successfully resolved ${
               JSON.stringify(geoLocation)
             } for geolocationId=${geolocationId}`,
           );
@@ -397,9 +379,7 @@ export class VolunteeringDB {
     skills: string[],
   ): Promise<QueryObjectResult<VolunteeringDBRow>> {
     logger.debug(
-      `queryRecosBasedOnTopicsAndSkills ${
-        JSON.stringify({ offset, limit, topics, skills })
-      }`,
+      `queryRecosBasedOnTopicsAndSkills ${JSON.stringify({ offset, limit, topics, skills })}`,
     );
     const queryVector = JSON.stringify(recosQueryVector(topics, skills));
     return await this.client.queryObject<VolunteeringDBRow>`
@@ -423,9 +403,7 @@ export class VolunteeringDB {
     geoLocation: GeoLocation,
   ): Promise<QueryObjectResult<VolunteeringDBRow>> {
     logger.debug(
-      `queryRecosBasedOnTopicsSkillsAndLocation ${
-        JSON.stringify({ offset, limit, topics, skills, geoLocation })
-      }`,
+      `queryRecosBasedOnTopicsSkillsAndLocation ${JSON.stringify({ offset, limit, topics, skills, geoLocation })}`,
     );
     const rankingWeightCosineSimilarity = 0.7; // Weight for cosine similarity
     const rankingWeightDistance = 0.3; // Weight for proximity
@@ -466,9 +444,7 @@ export class VolunteeringDB {
     geoLocation: GeoLocation,
   ): Promise<QueryObjectResult<VolunteeringDBRow>> {
     logger.debug(
-      `queryRecosBasedOnLocation ${
-        JSON.stringify({ offset, limit, geoLocation })
-      }`,
+      `queryRecosBasedOnLocation ${JSON.stringify({ offset, limit, geoLocation })}`,
     );
     const { lat, lon } = geoLocation;
     return await this.client.queryObject<VolunteeringDBRow>`

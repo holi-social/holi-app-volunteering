@@ -59,9 +59,7 @@ const serverConfigFromEnv = (): ServerConfig => {
     imageProxyBaseUrl: requiredEnv(
       "IMAGE_PROXY_BASE_URL",
       String,
-      environment === "production"
-        ? "https://images.holi.social"
-        : "https://dev-images.holi.social",
+      environment === "production" ? "https://images.holi.social" : "https://dev-images.holi.social",
     ),
     volunteeringDB: {
       hostname: requiredEnv(
