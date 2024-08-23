@@ -1,18 +1,6 @@
 import type { Spy } from "./dev_deps.ts";
-import {
-  assertEquals,
-  assertRejects,
-  assertSpyCall,
-  assertSpyCalls,
-  describe,
-  it,
-  spy,
-} from "./dev_deps.ts";
-import {
-  exportedForTesting,
-  GeoLocationResolver,
-  VolunteeringDB,
-} from "./volunteering_db.ts";
+import { assertEquals, assertRejects, assertSpyCall, assertSpyCalls, describe, it, spy } from "./dev_deps.ts";
+import { exportedForTesting, GeoLocationResolver, VolunteeringDB } from "./volunteering_db.ts";
 import { Client } from "./deps.ts";
 
 type ResolveLocationSpy = Spy<

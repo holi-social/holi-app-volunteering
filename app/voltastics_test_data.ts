@@ -1,8 +1,4 @@
-import {
-  ApiCategoriesResponse,
-  ApiSearchEngagement,
-  ApiSearchEngagementsResponse,
-} from "./api_types.ts";
+import { ApiCategoriesResponse, ApiSearchEngagement, ApiSearchEngagementsResponse } from "./api_types.ts";
 import { CategoriesResponse, EngagementsResponse } from "./types.ts";
 import { transformEngagement } from "./voltastics.ts";
 
@@ -18,8 +14,7 @@ export const apiSearchEngagement1: ApiSearchEngagement = {
   description:
     "<p>Weitsprung ist ein gemeinnütziger Reiseanbieter, der sich auf die Bedürfnisse von Reisenden mit Handicap eingestellt hat und seinen Kund:innen während der gesamten Urlaubszeit Hilfen in Form von persönlicher Assistenz bietet. Es reisen Reisebegleiter:innen mit, die die persönlichen Assistenzen geben und dort unterstützen, wo Hilfe gewünscht und gebraucht wird.</p>\n<p>Das ganze Jahr über finden Gruppenreisen mit 4-10 Reisegästen statt. Reiseziele sind Nordsee, Ostsee, Lüneburger Heide, aber auch die Balearen, Kanaren sowie USA, Vietnam und Südafrika. Die Reisedauer liegt zwischen 8 und 21 Tagen.</p>\n<p><strong>Für diese Reisen sucht Weitsprung ehrenamtliche Reisebegleiter:innen. </strong>Die Reisebegleiter:innen geben den Reisenden mit Handicap alle Hilfen vom Koffertragen über Mobilität, Orientierung, Kommmunikation bis hin zur grundpflegerischen Versorgung und vieles mehr.</p>\n<p>Eine Reisegruppe besteht in der Regel aus 4-10 Personen und wird von 2-4 Reisebegleiter:innen unterstützt. Sie werden für diese Aufgabe geschult und fachlich angeleitet. Die ehrenamtlichen Reisebegleiter:innen sind unfall- und haftpflichtversichert. Reisekosten entstehen nicht, die Kosten der Fahrt/Flug, Unterbringung ggf. Halbpension übernimmt der zu begleitende Reisende.</p>\n<p>Der Wohnort der Reisebegleiter und -begleiterinnen kann sich im gesamten Bundesgebiet befinden. Die Vorbereitungstreffen zu den Reisen finden online statt. Ein Online-Einsteigerseminar bereitet Sie auf die Reise vor (2 Tage, jeweils von 10-14 Uhr, an einem Wochenende).</p>\n<p>Gesucht werden reisefreudige Freiwillige, die gern im Team arbeiten und Herausforderungen mögen. Außerdem sollten Sie sich vorstellen können, regelmäßig zu unterstützen - also nicht von vornherein nur eine Reise begleiten wollen. Wie häufig Sie das machen, entscheiden Sie selbst, auch eine Reise pro Jahr ist für uns hilfreich.</p>\n<p>Bitte beachten Sie auch, dass Sie für dieses Engagement gegen Corona geimpft sein müssen. Wenn Sie sich für dieses Engagement interessieren, melden Sie sich gerne in der Freiwilligenagentur.</p>",
   source: "Aktion Mensch",
-  title:
-    "Ehrenamtliche Reisebegleiter:innen für Menschen mit Beeinträchtigungen gesucht",
+  title: "Ehrenamtliche Reisebegleiter:innen für Menschen mit Beeinträchtigungen gesucht",
   hashTags: [
     "Munich",
     "Aktion Mensch",
@@ -34,8 +29,7 @@ export const apiSearchEngagement1: ApiSearchEngagement = {
 
 export const apiSearchEngagement2: ApiSearchEngagement = {
   id: 75434,
-  image:
-    "https://test.com/search/image?id=75434-ehrenamt-im-ambulanten-kinderhospizdienst-hhansestrolche",
+  image: "https://test.com/search/image?id=75434-ehrenamt-im-ambulanten-kinderhospizdienst-hhansestrolche",
   latitude: null,
   link:
     "https://www.aktion-mensch.de/was-du-tun-kannst/ehrenamt/engagement-plattform#/lokale-angebote/f55690cd-e982-4f28-afa6-a9f1b87d8c11?utm_source=voltastics",
@@ -263,8 +257,7 @@ export const Munich = {
         "abbreviation_STD": "CET",
         "abbreviation_DST": "CEST",
       },
-      "place_id":
-        "51c69eecf83f18274059dd3ad3f89a134840f00101f901dcf3000000000000c002099203084dc3bc6e6368656e",
+      "place_id": "51c69eecf83f18274059dd3ad3f89a134840f00101f901dcf3000000000000c002099203084dc3bc6e6368656e",
     },
     "geometry": {
       "type": "MultiPolygon",

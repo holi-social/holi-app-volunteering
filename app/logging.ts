@@ -49,14 +49,12 @@ class Logger {
     if (!shouldLogLevel(this.level, severity)) return;
 
     const date = new Date().toISOString();
-    const input = this.environment === "development"
-      ? `${date} ${severity} ${message}`
-      : JSON.stringify({
-        environment: this.environment,
-        severity,
-        message,
-        ...options,
-      });
+    const input = this.environment === "development" ? `${date} ${severity} ${message}` : JSON.stringify({
+      environment: this.environment,
+      severity,
+      message,
+      ...options,
+    });
 
     switch (severity) {
       case LogSeverity.DEFAULT:

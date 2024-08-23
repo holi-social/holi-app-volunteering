@@ -120,45 +120,32 @@ const createResolvers = (
       _parent: any,
       parameters: EngagementOpportunitiesParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake
-        ? Promise.resolve({ totalResults: 0, data: [] })
-        : fetchEngagementOpportunities(config)(parameters),
+      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : fetchEngagementOpportunities(config)(parameters),
     engagement: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementParameters,
-    ): Promise<EngagementResponse> =>
-      config.fake ? Promise.resolve(null) : fetchEngagement(config)(parameters),
+    ): Promise<EngagementResponse> => config.fake ? Promise.resolve(null) : fetchEngagement(config)(parameters),
     categories: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-    ): Promise<CategoriesResponse> =>
-      config.fake
-        ? Promise.resolve({ data: [] })
-        : fetchCategories(config.voltastics),
+    ): Promise<CategoriesResponse> => config.fake ? Promise.resolve({ data: [] }) : fetchCategories(config.voltastics),
     engagements: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementsParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake
-        ? Promise.resolve({ totalResults: 0, data: [] })
-        : fetchEngagements(config)(parameters),
+      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : fetchEngagements(config)(parameters),
     cities: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-    ): Promise<CitiesResponse> =>
-      config.fake
-        ? Promise.resolve({ data: [] })
-        : fetchCities(config.voltastics),
+    ): Promise<CitiesResponse> => config.fake ? Promise.resolve({ data: [] }) : fetchCities(config.voltastics),
     engagementRecommendations: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementRecommendationsParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake
-        ? Promise.resolve({ totalResults: 0, data: [] })
-        : volunteeringDB.findRecommendations(parameters),
+      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.findRecommendations(parameters),
   },
   Mutation: {
     trackEngagementView: (
@@ -166,9 +153,7 @@ const createResolvers = (
       _parent: any,
       parameters: TrackEngagementViewParameters,
     ): Promise<TrackEngagementViewResponse> =>
-      config.fake
-        ? Promise.resolve({ id: parameters.id })
-        : trackEngagementView(config.voltastics)(parameters),
+      config.fake ? Promise.resolve({ id: parameters.id }) : trackEngagementView(config.voltastics)(parameters),
   },
 });
 
@@ -248,9 +233,7 @@ export const startServer = (config: ServerConfig): Promise<void> => {
     port: config.port,
     onListen({ port, hostname }) {
       logger.info(
-        `Server started at http://${
-          hostname === "0.0.0.0" ? "localhost" : hostname
-        }:${port}/graphql`,
+        `Server started at http://${hostname === "0.0.0.0" ? "localhost" : hostname}:${port}/graphql`,
       );
       if (config.fake) {
         logger.info(
