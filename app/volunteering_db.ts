@@ -30,7 +30,7 @@ type VolunteeringDBRow = {
   location?: string;
   latitude?: number;
   longitude?: number;
-  embedding_array: string; // actually is `number[]`
+  embedding_array: string; // JSON containing `number[]`
   cosine_similarity: number;
   distance_in_meters: number;
 };
@@ -233,12 +233,11 @@ const toEngagement = (
   queriedSkills: string[],
 ) =>
 (row: VolunteeringDBRow): Engagement => {
-  const { matchedTopics: matchedTopics, matchedSkills: matchedSkills } =
-    decodeMatchesFromEmbedding(
-      JSON.parse(row.embedding_array) as number[],
-      queriedTopics,
-      queriedSkills,
-    );
+  const { matchedTopics, matchedSkills } = decodeMatchesFromEmbedding(
+    JSON.parse(row.embedding_array) as number[],
+    queriedTopics,
+    queriedSkills,
+  );
   return {
     id: "" + row.id,
     title: row.title,
