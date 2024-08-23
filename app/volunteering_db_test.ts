@@ -112,7 +112,7 @@ describe("VolunteeringDB", () => {
     assertEquals(matches.matchedTopics, expectedMatchedTopics);
     assertEquals(matches.matchedSkills, expectedMatchedSkills);
   });
-  it("filters out topics and skills matches with low confidence", () => {
+  it("filters out topics and skills matches with confidence below MATCH_CONFIDENCE_THRESHOLD", () => {
     // deno-fmt-ignore
     const embedding: number[] = [
       0.7,0,0,0,0,0,0,0,0,0.3,
@@ -148,12 +148,12 @@ describe("VolunteeringDB", () => {
     assertEquals(matches.matchedTopics, expectedMatchedTopics);
     assertEquals(matches.matchedSkills, expectedMatchedSkills);
   });
-  it("filters out topics and skills matches not queried for", () => {
+  it("ranks topics and skills matches queried for higher", () => {
     // deno-fmt-ignore
     const embedding: number[] = [
-      0.8,0,0,0,0,0,0,0,0,0.5,
+      0.6,0,0,0,0,0,0,0,0,0.7,
       0,0,0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0.6,
+      0,0,0,0,0,0,0.8,0.9,
       0.6,0,0,-0.5,0,0,0,0,0,0.99,
       0,0,0,0,0,0,0,0,0,0,
       0,0,0,0,0,0,0,0,0,0,
@@ -162,12 +162,16 @@ describe("VolunteeringDB", () => {
     ]
     // ordered by degree of match descending (best matches first)
     const expectedMatchedTopics = [
-      "agriculture-food", // first item (index 0)
       "disabilities-inclusion", // tenth item (index 9)
+      "agriculture-food", // first item (index 0)
+      "water-ocean", // last item (
+      "urban-rural-development",
     ];
     // ordered by degree of match descending (best matches first)
     const expectedMatchedSkills = [
       "writing-translation", // last item  (index 49)
+      "conflict-management", // tenth item (index 9)
+      "adaptability", // first item (index 0)
     ];
     const queriedTopics = ["agriculture-food", "disabilities-inclusion"];
     const queriedSkills = ["writing-translation"];

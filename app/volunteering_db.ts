@@ -134,9 +134,10 @@ const SKILLS_VECTOR_INDICES_REVERSE = new Map<number, string>(
 const EMBEDDING_DIMENSIONS = TOPICS_VECTOR_INDICES.size +
   SKILLS_VECTOR_INDICES.size;
 
-/** When annotating search results with matches, this is the threshold applied to embedding values below which a value
- * is not considered a match */
-const MATCH_CONFIDENCE_THRESHOLD = 0.5;
+/** When annotating search results with matches, this is these thresholds applied to embedding values below which a
+ * value is not considered a match */
+const MATCH_TOPIC_CONFIDENCE_THRESHOLD = 0.5;
+const MATCH_SKILL_CONFIDENCE_THRESHOLD = 0.5;
 
 const recosQueryVector = (topics: string[], skills: string[]): number[] => {
   const queryVector: number[] = Array(EMBEDDING_DIMENSIONS).fill(0.0);
@@ -155,6 +156,29 @@ const recosQueryVector = (topics: string[], skills: string[]): number[] => {
   return queryVector;
 };
 
+/**
+ * Sorts matches with confidence so that
+ *
+ * * queried for terms come first, ordered by confidence DESC
+ * * not queried for terms come after, ordered by confidence DESC
+ */
+const sortMatches = (
+  queriedTerms: string[],
+  matchedTermsWithConfidence: [string, number][],
+): [string, number][] => {
+  const comparator = (queried: string[]) =>
+  (
+    a: [string, number],
+    b: [string, number],
+  ): number => {
+    if (queried.includes(a[0]) && queried.includes(b[0])) return b[1] - a[1]; // both terms were queried for, rank relative to another
+    else if (queried.includes(a[0])) return -1; // `a` was queried for, rank a higher
+    else if (queried.includes(b[0])) return 1; // `b` was queried for, rank b higher
+    else return b[1] - a[1]; // both terms were not queried for, rank relative to another
+  };
+  return matchedTermsWithConfidence.sort(comparator(queriedTerms));
+};
+
 const decodeMatchesFromEmbedding = (
   embedding: number[],
   queriedTopics: string[],
@@ -166,41 +190,31 @@ const decodeMatchesFromEmbedding = (
     );
   }
   const skillsOffset = TOPICS_VECTOR_INDICES.size;
-  const matchedTopicsWithConfidence = embedding.reduce<[string, number][]>(
-    (acc, value, index, _array) => {
-      if (
-        index < skillsOffset &&
-        value >= MATCH_CONFIDENCE_THRESHOLD
-      ) {
-        const topic = TOPICS_VECTOR_INDICES_REVERSE.get(index)!;
-        if (queriedTopics.includes(topic)) {
-          return [...acc, [topic, value]];
-        }
-      }
-      return acc;
-    },
-    [],
-  );
-  const matchedSkillsWithConfidence = embedding.reduce<[string, number][]>(
-    (acc, value, index, _array) => {
-      if (
-        index >= skillsOffset &&
-        value >= MATCH_CONFIDENCE_THRESHOLD
-      ) {
-        const skill = SKILLS_VECTOR_INDICES_REVERSE.get(index - skillsOffset)!;
-        if (queriedSkills.includes(skill)) {
-          return [...acc, [skill, value]];
-        }
-      }
-      return acc;
-    },
-    [],
-  );
+  const matchedTopicsWithConfidence = embedding
+    .map((confidence, index): [string, number] | null => {
+      return index < skillsOffset
+        ? [TOPICS_VECTOR_INDICES_REVERSE.get(index)!, confidence]
+        : null;
+    })
+    .filter((matchWithConfidence) => matchWithConfidence != null)
+    .filter((matchWithConfidence) =>
+      matchWithConfidence[1] >= MATCH_TOPIC_CONFIDENCE_THRESHOLD
+    );
+  const matchedSkillsWithConfidence = embedding
+    .map((confidence, index): [string, number] | null => {
+      return index >= skillsOffset
+        ? [SKILLS_VECTOR_INDICES_REVERSE.get(index - skillsOffset)!, confidence]
+        : null;
+    })
+    .filter((matchWithConfidence) => matchWithConfidence != null)
+    .filter((matchWithConfidence) =>
+      matchWithConfidence[1] >= MATCH_SKILL_CONFIDENCE_THRESHOLD
+    );
   return {
-    matchedTopics: matchedTopicsWithConfidence.sort((a, b) => b[1] - a[1]).map((
+    matchedTopics: sortMatches(queriedTopics, matchedTopicsWithConfidence).map((
       a,
     ) => a[0]),
-    matchedSkills: matchedSkillsWithConfidence.sort((a, b) => b[1] - a[1]).map((
+    matchedSkills: sortMatches(queriedSkills, matchedSkillsWithConfidence).map((
       a,
     ) => a[0]),
   };
