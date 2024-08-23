@@ -47,8 +47,22 @@ const typeDefs = `
       location: String
       latitude: Float
       longitude: Float
+      
+      """
+      If this engagement is part of a recommendation query response, matchedTopics contains the slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
+      """
+      matchedTopics: [String]
+      
+      """
+      If this engagement is part of a recommendation query response, matchedSkills contains the slugs of matched skills. The order is defined as follows: 1) skills that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
+      """
+      matchedSkills: [String]
+      
+      """
+      If this engagement is part of a recommendation query response, matchedGeoLocationDistanceInMeters contains the distance (in meters) between the engagement and the location given in the query.
+      """
+      matchedGeoLocationDistanceInMeters: Float
     }
-    
 
     type Category {
       name: String!
@@ -72,16 +86,23 @@ const typeDefs = `
     type CitiesResponse {
       data: [City]!
     }
-
   
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
         engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse!
+        
+        """
+        Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
+        """
         engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!], skills: [String!], geolocationId: String): EngagementsResponse!
+        
         engagement(id: String!): Engagement
+        
         categories: CategoriesResponse!
+        
         engagements(offset: Int! = 0, limit: Int! = 10, location: String, category: String, longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse! @deprecated(reason: "Use engagementOpportunities instead, as its support will be discontinued after 1.5.1.")
-        cities: CitiesResponse! @deprecated(reason: "It will no longer be supported after 1.5.1.")
+        
+        cities: CitiesResponse! @deprecated(reason: "It will no longer be supported after 1.5.1.")  
     }
 
     type Mutation {
