@@ -100,8 +100,8 @@ resource "google_cloud_run_service" "volunteering_api" {
           name = "DB_USERNAME"
           value_from {
             secret_key_ref {
-              key = "latest"
-              name  = local.environment_name == "production" ? "VOLUNTEERING_DB_USERNAME_PRODUCTION" : "VOLUNTEERING_DB_USERNAME_DEVELOPMENT"
+              key  = "latest"
+              name = local.environment_name == "production" ? "VOLUNTEERING_DB_USERNAME_PRODUCTION" : "VOLUNTEERING_DB_USERNAME_DEVELOPMENT"
             }
           }
         }
@@ -109,13 +109,13 @@ resource "google_cloud_run_service" "volunteering_api" {
           name = "DB_PASSWORD"
           value_from {
             secret_key_ref {
-              key = "latest"
-              name  = local.environment_name == "production" ? "VOLUNTEERING_DB_PASSWORD_PRODUCTION" : "VOLUNTEERING_DB_PASSWORD_DEVELOPMENT"
+              key  = "latest"
+              name = local.environment_name == "production" ? "VOLUNTEERING_DB_PASSWORD_PRODUCTION" : "VOLUNTEERING_DB_PASSWORD_DEVELOPMENT"
             }
           }
         }
         env {
-          name = "GEO_API_ENDPOINT_URL"
+          name  = "GEO_API_ENDPOINT_URL"
           value = data.terraform_remote_state.holi_geo_api_environments_state.outputs.api_endpoint_url
         }
         resources {
@@ -141,6 +141,10 @@ resource "google_cloud_run_service" "volunteering_api" {
         "run.googleapis.com/vpc-access-connector" = data.terraform_remote_state.holi_infra_state.outputs.vpc_access_connector_name
         # possible values: all-traffic/private-ranges-only(default) https://cloud.google.com/sdk/gcloud/reference/run/services/update#--vpc-egress
         "run.googleapis.com/vpc-access-egress" = "all-traffic"
+      }
+      labels = {
+        "environment_type" = local.environment_type
+        "holi_service"     = "app-volunteering"
       }
     }
   }
