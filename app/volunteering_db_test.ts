@@ -98,10 +98,10 @@ describe("VolunteeringDB", () => {
     it("correctly reverse-decodes topics and skills matches from embeddings", () => {
       // deno-fmt-ignore
       const embedding: number[] = [
-        0.7,0,0,0,0,0,0,0,0,0.5,
+        0.9,0,0,0,0,0,0,0,0,0.8,
         0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0.6,
-        0.6,0,0,-0.5,0,0,0,0,0,0.99,
+        0,0,0,0,0,0,0,0.85,
+        0.85,0,0,-0.5,0,0,0,0,0,0.99,
         0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0,0,0,0,
@@ -136,9 +136,9 @@ describe("VolunteeringDB", () => {
     it("filters out topics and skills matches with confidence below MATCH_CONFIDENCE_THRESHOLD", () => {
       // deno-fmt-ignore
       const embedding: number[] = [
-        0.7,0,0,0,0,0,0,0,0,0.3,
+        0.9,0,0,0,0,0,0,0,0,0.3,
         0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0.6,
+        0,0,0,0,0,0,0,0.85,
         0.3,0,0,-0.5,0,0,0,0,0,0.99,
         0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0,0,0,0,
@@ -172,10 +172,10 @@ describe("VolunteeringDB", () => {
     it("ranks topics and skills matches queried for higher", () => {
       // deno-fmt-ignore
       const embedding: number[] = [
-        0.6,0,0,0,0,0,0,0,0,0.7,
+        0.85,0,0,0,0,0,0,0,0,0.9,
         0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0.8,0.9,
-        0.6,0,0,-0.5,0,0,0,0,0,0.99,
+        0.85,0,0,-0.5,0,0,0,0,0,0.99,
         0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0,0,0,0,
