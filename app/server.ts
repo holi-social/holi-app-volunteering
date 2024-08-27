@@ -78,12 +78,12 @@ const typeDefs = `
         """
         Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
         """
-        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!], skills: [String!], geolocationId: String): EngagementsResponse!
+        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
         
         engagement(id: String!): Engagement
         
         categories: CategoriesResponse!
-        filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!], skills: [String!], geolocationId: String): EngagementsResponse!
+        filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
     }
 
     type Mutation {
