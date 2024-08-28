@@ -87,7 +87,6 @@ export class GeoAPIClient {
       const locationName = properties?.formatted;
       if (type === "Point" && !allowPoints && locationName) {
         logger.debug(`Retrieved point as geolocation, will retry with lookup for location ${locationName}`);
-        // We want a more extensive geometry than just a point - retry lookup (only once) with full location name
         const placeId = await this.resolvePlaceIdByName(locationName);
         if (placeId && placeId !== geolocationId) {
           return this.resolveGeometry(placeId, { allowPoints: true });
