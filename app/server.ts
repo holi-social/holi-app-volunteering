@@ -1,27 +1,19 @@
 import {
   CategoriesResponse,
-  CitiesResponse,
   EngagementOpportunitiesParameters,
   EngagementParameters,
   EngagementRecommendationsParameters,
   EngagementResponse,
-  EngagementsParameters,
   EngagementsResponse,
+  FilteredEngagementsParameters,
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
-import {
-  fetchCategories,
-  fetchCities,
-  fetchEngagement,
-  fetchEngagementOpportunities,
-  fetchEngagements,
-  trackEngagementView,
-} from "./voltastics.ts";
+import { fetchCategories, fetchEngagement, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
 import { logger } from "./logging.ts";
 import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
-import { resolveGeoLocationViaGeoAPI } from "./geo_api_client.ts";
+import { GeoAPIClient } from "./geo_api_client.ts";
 import { Client } from "https://deno.land/x/postgres@v0.19.3/client.ts";
 
 const typeDefs = `
@@ -47,8 +39,22 @@ const typeDefs = `
       location: String
       latitude: Float
       longitude: Float
+      
+      """
+      If this engagement is part of a recommendation query response, matchedTopics contains the slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
+      """
+      matchedTopics: [String]
+      
+      """
+      If this engagement is part of a recommendation query response, matchedSkills contains the slugs of matched skills. The order is defined as follows: 1) skills that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
+      """
+      matchedSkills: [String]
+      
+      """
+      If this engagement is part of a recommendation query response, matchedGeoLocationDistanceInMeters contains the distance (in meters) between the engagement and the location given in the query.
+      """
+      matchedGeoLocationDistanceInMeters: Float
     }
-    
 
     type Category {
       name: String!
@@ -65,23 +71,19 @@ const typeDefs = `
     
     scalar GeoJSON
 
-    type City {
-      name: String!
-    }
-
-    type CitiesResponse {
-      data: [City]!
-    }
-
-  
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
         engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse!
-        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!], skills: [String!], geolocationId: String): EngagementsResponse!
+        
+        """
+        Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
+        """
+        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
+        
         engagement(id: String!): Engagement
+        
         categories: CategoriesResponse!
-        engagements(offset: Int! = 0, limit: Int! = 10, location: String, category: String, longitude: Float, latitude: Float, radiusKm: Float): EngagementsResponse! @deprecated(reason: "Use engagementOpportunities instead, as its support will be discontinued after 1.5.1.")
-        cities: CitiesResponse! @deprecated(reason: "It will no longer be supported after 1.5.1.")
+        filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
     }
 
     type Mutation {
@@ -99,45 +101,28 @@ const createResolvers = (
       _parent: any,
       parameters: EngagementOpportunitiesParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake
-        ? Promise.resolve({ totalResults: 0, data: [] })
-        : fetchEngagementOpportunities(config)(parameters),
+      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : fetchEngagementOpportunities(config)(parameters),
     engagement: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementParameters,
-    ): Promise<EngagementResponse> =>
-      config.fake ? Promise.resolve(null) : fetchEngagement(config)(parameters),
+    ): Promise<EngagementResponse> => config.fake ? Promise.resolve(null) : fetchEngagement(config)(parameters),
     categories: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-    ): Promise<CategoriesResponse> =>
-      config.fake
-        ? Promise.resolve({ data: [] })
-        : fetchCategories(config.voltastics),
-    engagements: (
+    ): Promise<CategoriesResponse> => config.fake ? Promise.resolve({ data: [] }) : fetchCategories(config.voltastics),
+    filteredEngagements: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-      parameters: EngagementsParameters,
+      parameters: FilteredEngagementsParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake
-        ? Promise.resolve({ totalResults: 0, data: [] })
-        : fetchEngagements(config)(parameters),
-    cities: (
-      // deno-lint-ignore no-explicit-any
-      _parent: any,
-    ): Promise<CitiesResponse> =>
-      config.fake
-        ? Promise.resolve({ data: [] })
-        : fetchCities(config.voltastics),
+      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.filterEngagements(parameters),
     engagementRecommendations: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementRecommendationsParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake
-        ? Promise.resolve({ totalResults: 0, data: [] })
-        : volunteeringDB.findRecommendations(parameters),
+      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.findRecommendations(parameters),
   },
   Mutation: {
     trackEngagementView: (
@@ -145,15 +130,14 @@ const createResolvers = (
       _parent: any,
       parameters: TrackEngagementViewParameters,
     ): Promise<TrackEngagementViewResponse> =>
-      config.fake
-        ? Promise.resolve({ id: parameters.id })
-        : trackEngagementView(config.voltastics)(parameters),
+      config.fake ? Promise.resolve({ id: parameters.id }) : trackEngagementView(config.voltastics)(parameters),
   },
 });
 
 export const DEFAULT_PORT = 8004;
 export const DEFAULT_CACHE_ENABLED = true;
-export const DEFAULT_CACHE_TTL_MS_VOLTASTICS = 60_000;
+export const DEFAULT_CACHE_TTL_MS_VOLTASTICS = 86_400_000; // 24 hours
+export const DEFAULT_CACHE_TTL_MS_DB = 3_600_000; // 1 hour
 
 export const DEFAULT_DB_CONNECTION_ATTEMPTS = 10;
 
@@ -164,7 +148,8 @@ export interface VoltasticsConfig {
 export interface ServerConfig {
   port: number; // default: 8004
   cacheEnabled: boolean; // default: true
-  cacheTtlMsVoltastics: number; // default: 60 seconds
+  cacheTtlMsVoltastics: number; // default: 24 hours
+  cacheTtlMsDB: number; // default: 1 hour
   voltastics: VoltasticsConfig;
   imageProxyBaseUrl: string;
   fake: boolean; // For local development. If set, the API returns dummy data
@@ -181,8 +166,8 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
           "Query.engagementOpportunities": config.cacheTtlMsVoltastics,
           "Query.engagement": config.cacheTtlMsVoltastics,
           "Query.categories": config.cacheTtlMsVoltastics,
-          "Query.engagements": config.cacheTtlMsVoltastics,
-          "Query.cities": config.cacheTtlMsVoltastics,
+          "Query.filteredEngagements": config.cacheTtlMsDB,
+          "Query.engagementRecommendations": config.cacheTtlMsDB,
         },
       }),
     ]
@@ -205,10 +190,11 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
       attempts: config.volunteeringDB.connectionAttempts,
     },
   });
+  const geoAPIClient = new GeoAPIClient(config.geoAPIEndpointUrl);
   const volunteeringDB = new VolunteeringDB(
     client,
     config.imageProxyBaseUrl,
-    resolveGeoLocationViaGeoAPI(config.geoAPIEndpointUrl),
+    geoAPIClient,
   );
   const resolvers = createResolvers(config, volunteeringDB);
   return createYoga({
@@ -227,9 +213,7 @@ export const startServer = (config: ServerConfig): Promise<void> => {
     port: config.port,
     onListen({ port, hostname }) {
       logger.info(
-        `Server started at http://${
-          hostname === "0.0.0.0" ? "localhost" : hostname
-        }:${port}/graphql`,
+        `Server started at http://${hostname === "0.0.0.0" ? "localhost" : hostname}:${port}/graphql`,
       );
       if (config.fake) {
         logger.info(

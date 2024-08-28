@@ -1,25 +1,20 @@
 import {
   ApiCategoriesResponse,
-  ApiCitiesResponse,
   ApiDefaults,
   ApiEngagementResponse,
   ApiRoutes,
   ApiSearchEngagement,
   ApiSearchEngagementsResponse,
 } from "./api_types.ts";
-import { sortCitiesAlphabetically } from "./helpers.ts";
 import { logger } from "./logging.ts";
 import { ServerConfig, VoltasticsConfig } from "./server.ts";
 import {
   CategoriesResponse,
   Category,
-  CitiesResponse,
-  City,
   Engagement,
   EngagementOpportunitiesParameters,
   EngagementParameters,
   EngagementResponse,
-  EngagementsParameters,
   EngagementsResponse,
   Organizer,
   TrackEngagementViewParameters,
@@ -215,8 +210,7 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
 };
 
 export const fetchEngagement =
-  (config: ServerConfig) =>
-  ({ id }: EngagementParameters): Promise<EngagementResponse> => {
+  (config: ServerConfig) => ({ id }: EngagementParameters): Promise<EngagementResponse> => {
     const searchParams = new URLSearchParams();
     searchParams.append("id", id);
 
@@ -274,107 +268,6 @@ export const fetchCategories = (
       const duration = Date.now() - start;
       logger.error(
         `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
-      );
-      throw e;
-    });
-};
-
-// TODO: Delete the following when app version 1.5.1 is no longer supported.
-const transformCity = (city: string): City => {
-  return {
-    name: city,
-  };
-};
-
-const transformCitiesResponse = (
-  citiesResponse: ApiCitiesResponse,
-): CitiesResponse => {
-  return {
-    data: citiesResponse.sort(sortCitiesAlphabetically).map(transformCity),
-  };
-};
-
-const buildVoltasticsEngagementsSearchParams = ({
-  limit = 5,
-  offset = 0,
-  location = ApiDefaults.CITY,
-  category,
-  latitude,
-  longitude,
-  radiusKm,
-}: EngagementsParameters) => {
-  const params = new URLSearchParams();
-  params.append("limit", limit.toString());
-  params.append("offset", offset.toString());
-  params.append("city", location);
-
-  if (latitude) {
-    params.append("lat", latitude.toString());
-  }
-
-  if (longitude) {
-    params.append("lon", longitude.toString());
-  }
-
-  if (radiusKm) {
-    params.append("radius", radiusKm.toString());
-  }
-
-  if (category) {
-    params.append("use", category);
-  }
-
-  return params;
-};
-
-export const fetchEngagements =
-  (config: ServerConfig) =>
-  (params: EngagementsParameters): Promise<EngagementsResponse> => {
-    const searchParams = buildVoltasticsEngagementsSearchParams(params);
-    const start = Date.now();
-    logger.info(`fetching engagements from ${config.voltastics.baseUrl}`);
-
-    return fetchFromVoltasticsApi(
-      config.voltastics,
-      ApiRoutes.SEARCH_ENGAGEMENTS,
-      searchParams,
-    )
-      .then((result) => result.json())
-      .then(transformEngagementsResponse(config.imageProxyBaseUrl))
-      .then((result) => {
-        const duration = Date.now() - start;
-        logger.debug(`fetching engagements took ${duration} ms`);
-        return result;
-      })
-      .catch((e) => {
-        const duration = Date.now() - start;
-        logger.error(
-          `Error performing request to ${config.voltastics.baseUrl} after ${duration} ms: ${e.message}`,
-          { duration },
-        );
-        throw e;
-      });
-  };
-
-export const fetchCities = (
-  voltasticsConfig: VoltasticsConfig,
-): Promise<CitiesResponse> => {
-  const start = Date.now();
-  logger.info(`fetching cities from ${voltasticsConfig.baseUrl}`);
-
-  return fetchFromVoltasticsApi(voltasticsConfig, ApiRoutes.CITIES)
-    .then((result) => result.json())
-    .then(transformCitiesResponse)
-    .then((result) => {
-      const duration = Date.now() - start;
-      logger.debug(`fetching cities took ${duration} ms`);
-      return result;
-    })
-    .catch((e) => {
-      const duration = Date.now() - start;
-      logger.error(
-        `Error performing request to ${voltasticsConfig.baseUrl} after ${duration} ms: ${e.message}`,
-        { duration },
       );
       throw e;
     });

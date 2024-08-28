@@ -63,8 +63,12 @@ resource "google_cloud_run_service" "volunteering_api" {
           value = "true"
         }
         env {
-          name  = "CACHE_TTL_MS"
-          value = local.environment == "production" ? "86400000" : "86400000"
+          name  = "CACHE_TTL_MS_VOLTASTICS"
+          value = local.environment == "production" ? "86400000" : "86400000" # 24 hours
+        }
+        env {
+          name  = "CACHE_TTL_MS_DB"
+          value = local.environment == "production" ? "3600000" : "3600000" # 1 hour
         }
         env {
           name  = "VOLUNTEERING_VOLTASTICS_API_URL"
@@ -100,8 +104,8 @@ resource "google_cloud_run_service" "volunteering_api" {
           name = "DB_USERNAME"
           value_from {
             secret_key_ref {
-              key = "latest"
-              name  = local.environment_name == "production" ? "VOLUNTEERING_DB_USERNAME_PRODUCTION" : "VOLUNTEERING_DB_USERNAME_DEVELOPMENT"
+              key  = "latest"
+              name = local.environment_name == "production" ? "VOLUNTEERING_DB_USERNAME_PRODUCTION" : "VOLUNTEERING_DB_USERNAME_DEVELOPMENT"
             }
           }
         }
@@ -109,13 +113,13 @@ resource "google_cloud_run_service" "volunteering_api" {
           name = "DB_PASSWORD"
           value_from {
             secret_key_ref {
-              key = "latest"
-              name  = local.environment_name == "production" ? "VOLUNTEERING_DB_PASSWORD_PRODUCTION" : "VOLUNTEERING_DB_PASSWORD_DEVELOPMENT"
+              key  = "latest"
+              name = local.environment_name == "production" ? "VOLUNTEERING_DB_PASSWORD_PRODUCTION" : "VOLUNTEERING_DB_PASSWORD_DEVELOPMENT"
             }
           }
         }
         env {
-          name = "GEO_API_ENDPOINT_URL"
+          name  = "GEO_API_ENDPOINT_URL"
           value = data.terraform_remote_state.holi_geo_api_environments_state.outputs.api_endpoint_url
         }
         resources {
@@ -142,6 +146,11 @@ resource "google_cloud_run_service" "volunteering_api" {
         # possible values: all-traffic/private-ranges-only(default) https://cloud.google.com/sdk/gcloud/reference/run/services/update#--vpc-egress
         "run.googleapis.com/vpc-access-egress" = "all-traffic"
       }
+      # labels set on the revision level
+      labels = {
+        "environment_type" = local.environment_type
+        "holi_service"     = "app-volunteering"
+      }
     }
   }
 
@@ -150,6 +159,11 @@ resource "google_cloud_run_service" "volunteering_api" {
     annotations = {
       # possible values: all/internal/internal-and-cloud-load-balancing https://cloud.google.com/sdk/gcloud/reference/run/services/update#--ingress
       "run.googleapis.com/ingress" = "internal"
+    }
+    # labels set on the service level
+    labels = {
+      "environment_type" = local.environment_type
+      "holi_service"     = "app-volunteering"
     }
   }
 

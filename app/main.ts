@@ -1,6 +1,7 @@
 import { logger, LogSeverity } from "./logging.ts";
 import {
   DEFAULT_CACHE_ENABLED,
+  DEFAULT_CACHE_TTL_MS_DB,
   DEFAULT_CACHE_TTL_MS_VOLTASTICS,
   DEFAULT_DB_CONNECTION_ATTEMPTS,
   DEFAULT_PORT,
@@ -44,6 +45,11 @@ const serverConfigFromEnv = (): ServerConfig => {
       Number,
       DEFAULT_CACHE_TTL_MS_VOLTASTICS,
     ),
+    cacheTtlMsDB: requiredEnv(
+      "DEFAULT_CACHE_TTL_MS_DB",
+      Number,
+      DEFAULT_CACHE_TTL_MS_DB,
+    ),
     voltastics: {
       baseUrl: requiredEnv(
         "VOLUNTEERING_VOLTASTICS_API_URL",
@@ -59,9 +65,7 @@ const serverConfigFromEnv = (): ServerConfig => {
     imageProxyBaseUrl: requiredEnv(
       "IMAGE_PROXY_BASE_URL",
       String,
-      environment === "production"
-        ? "https://images.holi.social"
-        : "https://dev-images.holi.social",
+      environment === "production" ? "https://images.holi.social" : "https://dev-images.holi.social",
     ),
     volunteeringDB: {
       hostname: requiredEnv(

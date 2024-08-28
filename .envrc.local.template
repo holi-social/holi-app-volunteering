@@ -10,3 +10,5 @@ export DB_USERNAME=
 export DB_PASSWORD=
 
 export GEO_API_ENDPOINT_URL=
+# Using local backends:
+# export GEO_API_ENDPOINT_URL=http://localhost:8003/graphql

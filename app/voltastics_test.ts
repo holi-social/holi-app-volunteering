@@ -11,17 +11,8 @@ import {
 } from "./dev_deps.ts";
 import { processGqlRequest, stubFetch } from "./common_test.ts";
 
-import {
-  CategoriesResponse,
-  Engagement,
-  EngagementsResponse,
-} from "./types.ts";
-import {
-  createGraphQLServer,
-  GraphQLServer,
-  ServerConfig,
-  VoltasticsConfig,
-} from "./server.ts";
+import { CategoriesResponse, Engagement, EngagementsResponse } from "./types.ts";
+import { createGraphQLServer, GraphQLServer, ServerConfig, VoltasticsConfig } from "./server.ts";
 
 import {
   apiCategoriesResponse,
@@ -32,11 +23,7 @@ import {
   engagementsResponse,
   Munich,
 } from "./voltastics_test_data.ts";
-import {
-  fetchCategories,
-  fetchEngagement,
-  fetchEngagementOpportunities,
-} from "./voltastics.ts";
+import { fetchCategories, fetchEngagement, fetchEngagementOpportunities } from "./voltastics.ts";
 import { GraphQLError } from "./deps.ts";
 
 const emptyResponse = {
@@ -134,6 +121,7 @@ const serverConfigMock: ServerConfig = {
   voltastics: voltasticsConfigMock,
   imageProxyBaseUrl: "https://dev-images.holi.social",
   cacheTtlMsVoltastics: 0,
+  cacheTtlMsDB: 0,
   fake: false,
   volunteeringDB: {
     hostname: "fakehost",
@@ -152,6 +140,7 @@ const noCacheServerConfig = {
   imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
   port: 0,
   cacheTtlMsVoltastics: 0,
+  cacheTtlMsDB: 0,
   fake: false,
   volunteeringDB: {
     hostname: "fakehost",
