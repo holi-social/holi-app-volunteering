@@ -3,12 +3,18 @@ import { GraphQLServer } from "./server.ts";
 
 export type ResponsePayload = Record<string, unknown> | Array<unknown> | Error;
 
-export const stubFetch = (response: ResponsePayload) => {
+export const stubFetchWithResponses = (responses: ResponsePayload[]) => {
   return stub(
     globalThis,
     "fetch",
-    returnsNext([Promise.resolve(new Response(JSON.stringify(response)))]),
+    returnsNext(
+      responses.map((response) => Promise.resolve(new Response(JSON.stringify(response)))),
+    ),
   );
+};
+
+export const stubFetch = (response: ResponsePayload) => {
+  return stubFetchWithResponses([response]);
 };
 
 export const processGqlRequest = (

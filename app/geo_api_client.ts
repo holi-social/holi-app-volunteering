@@ -1,13 +1,24 @@
-import { GeolocationCoordinates, GeolocationGeometry } from "./types.ts";
+import { GeolocationCoordinates, GeolocationGeometry, GeolocationProperties } from "./types.ts";
+import { logger } from "./logging.ts";
 
 type GeoAPIResponse = {
   data?: {
     placeDetails?: {
       geolocation?: {
-        properties?: Partial<GeolocationCoordinates>;
+        properties?: Partial<GeolocationProperties>;
         geometry?: Partial<GeolocationGeometry>;
       };
     };
+  };
+};
+
+type GeoAPIPlace = {
+  id?: string;
+};
+
+type GeoAPIAutocompleteResponse = {
+  data?: {
+    placesAutocomplete?: GeoAPIPlace[];
   };
 };
 
@@ -33,6 +44,21 @@ export class GeoAPIClient {
     return response.json() as GeoAPIResponse;
   }
 
+  private async resolvePlaceIdByName(name: string): Promise<string | undefined> {
+    const graphQLQuery = `{ placesAutocomplete(text: "${name}", limit: 1) { id } }`;
+    const response = await fetch(this.geoAPIEndpointUrl, {
+      "body": JSON.stringify({ query: graphQLQuery }),
+      "headers": {
+        "Accept": "application/graphql-response+json, application/json",
+        "Content-Type": "application/json",
+      },
+      "method": "POST",
+    });
+    const { data } = await response.json() as GeoAPIAutocompleteResponse;
+    const [place] = data?.placesAutocomplete || [];
+    return place?.id;
+  }
+
   async resolveCoordinates(
     geolocationId: string,
   ): Promise<GeolocationCoordinates> {
@@ -50,11 +76,23 @@ export class GeoAPIClient {
 
   async resolveGeometry(
     geolocationId: string,
+    {
+      allowPoints = false,
+    }: { allowPoints?: boolean } = {},
   ): Promise<GeolocationGeometry> {
     const responseJSON = await this.resolveGeolocationViaGeoAPI(geolocationId);
-    const { type, coordinates } = responseJSON.data?.placeDetails?.geolocation
-      ?.geometry || {};
+    const { geometry, properties } = responseJSON.data?.placeDetails?.geolocation || {};
+    const { type, coordinates } = geometry || {};
     if (type && coordinates) {
+      const locationName = properties?.formatted;
+      if (type === "Point" && !allowPoints && locationName) {
+        logger.debug(`Retrieved point as geolocation, will retry with lookup for location ${locationName}`);
+        // We want a more extensive geometry than just a point - retry lookup (only once) with full location name
+        const placeId = await this.resolvePlaceIdByName(locationName);
+        if (placeId && placeId !== geolocationId) {
+          return this.resolveGeometry(placeId, { allowPoints: true });
+        }
+      }
       return { type, coordinates };
     } else {
       return Promise.reject(
