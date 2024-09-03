@@ -9,8 +9,8 @@ import {
   Stub,
   stub,
 } from "./dev_deps.ts";
-import { exportedForTesting, VolunteeringDB } from "./volunteering_db.ts";
-import { Client } from "./deps.ts";
+import { exportedForTesting, VolunteeringDB, VolunteeringDBRow } from "./volunteering_db.ts";
+import { Client, GraphQLError } from "./deps.ts";
 import { GeoAPIClient } from "./geo_api_client.ts";
 
 // taken from https://stackoverflow.com/a/2450976 ("Fisher-Yates Shuffle")
@@ -37,14 +37,15 @@ const testGeometry = {
   "coordinates": [[[3.9265487, 52.576948399], [13.9304862, 52.574110199]]],
 };
 
-const withMockedDependencies = (
+const withMockedDependencies = (queryObjectResult: VolunteeringDBRow[] = []) =>
+(
   test: (
     vDB: VolunteeringDB,
     geoApiClient: GeoAPIClient,
   ) => unknown | Promise<unknown>,
 ) => {
   const mockClient = {
-    queryObject: () => Promise.resolve({ rows: [] }),
+    queryObject: () => Promise.resolve({ rows: queryObjectResult }),
   } as unknown as Client;
   const mockedGeoApiClient = {} as unknown as GeoAPIClient;
   stub(
@@ -225,9 +226,82 @@ describe("VolunteeringDB", () => {
     });
   });
 
+  describe("querying engagement by id", () => {
+    it("correctly parses engagement", () => {
+      // deno-fmt-ignore
+      const embedding_array = [
+        1,0,0,0,0,0,0,0,0,1,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,1,
+        1,0,0,0,0,0,0,0,0,1,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,1,
+      ]
+      const dbRow: VolunteeringDBRow = {
+        id: 1,
+        title: "moin",
+        description: "moin blabla",
+        link: "https://moin.bla",
+        image: "https://moin.bla/blub.jpg",
+        source: "moin_bla",
+        uses: "blib",
+        orga: "blob",
+        imageorga: "https://moin.bla/blob.jpg",
+        location: "Blibhausen",
+        latitude: 12.3456,
+        longitude: 65.4321,
+        embedding_array: JSON.stringify(embedding_array),
+        cosine_similarity: 0,
+        distance_in_meters: 0,
+        total_results: 1,
+      };
+      withMockedDependencies([dbRow])(async (volunteeringDB) => {
+        const response = await volunteeringDB.engagementById({ id: "1" });
+        assertEquals(response?.id, `${dbRow.id}`);
+        assertEquals(response?.title, dbRow.title);
+        assertEquals(response?.description, dbRow.description);
+        assertEquals(response?.url, dbRow.link);
+        assertEquals(
+          response?.imageUrl,
+          "mock-image-proxy-base-url/crop:0:0/resize:auto:1024/plain/" + encodeURIComponent(dbRow.image!),
+        );
+        assertEquals(response?.imageUrlOriginal, dbRow.image);
+        assertEquals(response?.source, dbRow.source);
+        assertEquals(response?.categories, undefined);
+        assertEquals(response?.organizer, {
+          name: dbRow.orga,
+          imageUrl: dbRow.imageorga,
+        });
+        assertEquals(response?.location, dbRow.location);
+        assertEquals(response?.latitude, dbRow.latitude);
+        assertEquals(response?.longitude, dbRow.longitude);
+        assertEquals(response?.matchedTopics, [
+          "agriculture-food", // first item (index 0)
+          "disabilities-inclusion", // tenth item (index 9)
+          "water-ocean", // last item  (index 27)
+        ]);
+        assertEquals(response?.matchedSkills, [
+          "adaptability", // first item (index 0)
+          "conflict-management", // tenth item (index 9)
+          "writing-translation", // last item  (index 49)
+        ]);
+        assertEquals(response?.matchedGeoLocationDistanceInMeters, 0);
+      });
+    });
+
+    it("throws NOT_FOUND error for empty result", () => {
+      withMockedDependencies([])(async (volunteeringDB) => {
+        const query = () => volunteeringDB.engagementById({ id: "1" });
+        await assertRejects(query, GraphQLError, "Not found");
+      });
+    });
+  });
+
   describe("findRecommendations", () => {
     it("resolves latitude/longitude using the GeoAPI client when geolocationId is given", () => {
-      withMockedDependencies(
+      withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
           volunteeringDB.findRecommendations({
             limit: 10,
@@ -243,7 +317,7 @@ describe("VolunteeringDB", () => {
       );
     });
     it("does not resolve latitude/longitude when geolocationId is not given", () => {
-      withMockedDependencies(
+      withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
           volunteeringDB.findRecommendations({
             limit: 10,
@@ -256,7 +330,7 @@ describe("VolunteeringDB", () => {
       );
     });
     it("falls back to recommend based only on topics and skills if given and geo location resolution fails", () => {
-      withMockedDependencies(
+      withMockedDependencies()(
         async (volunteeringDB, geoAPIClient) => {
           stub(
             geoAPIClient,
@@ -277,7 +351,7 @@ describe("VolunteeringDB", () => {
       );
     });
     it("fails with error message if no topics and skills are given and geo location resolution fails", () => {
-      withMockedDependencies(
+      withMockedDependencies()(
         async (volunteeringDB, geoAPIClient) => {
           stub(
             geoAPIClient,
@@ -303,7 +377,7 @@ describe("VolunteeringDB", () => {
 
   describe("filterEngagements", () => {
     it("resolves geolocation geometry using the GeoAPI client when geolocationId is given", () => {
-      withMockedDependencies(
+      withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
           volunteeringDB.filterEngagements({
             limit: 10,
@@ -319,7 +393,7 @@ describe("VolunteeringDB", () => {
       );
     });
     it("does not resolve geolocation geometry when geolocationId is not given", () => {
-      withMockedDependencies(
+      withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
           volunteeringDB.filterEngagements({
             limit: 10,
@@ -332,7 +406,7 @@ describe("VolunteeringDB", () => {
       );
     });
     it("fails with error message if geolocation resolution fails", () => {
-      withMockedDependencies(
+      withMockedDependencies()(
         async (volunteeringDB, geoAPIClient) => {
           stub(
             geoAPIClient,
@@ -355,7 +429,7 @@ describe("VolunteeringDB", () => {
       );
     });
     it("fails with error message if no topics, skills and location are given", () => {
-      withMockedDependencies(
+      withMockedDependencies()(
         async (volunteeringDB, _geoAPIClient) => {
           await assertRejects(
             () =>

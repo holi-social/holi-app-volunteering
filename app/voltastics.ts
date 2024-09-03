@@ -1,7 +1,6 @@
 import {
   ApiCategoriesResponse,
   ApiDefaults,
-  ApiEngagementResponse,
   ApiRoutes,
   ApiSearchEngagement,
   ApiSearchEngagementsResponse,
@@ -13,17 +12,12 @@ import {
   Category,
   Engagement,
   EngagementOpportunitiesParameters,
-  EngagementParameters,
-  EngagementResponse,
   EngagementsResponse,
   Organizer,
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
 import { calculateRadius } from "./utils.ts";
-import { GraphQLError } from "./deps.ts";
-
-const ERROR_CODE_NOT_FOUND = "NOT_FOUND";
 
 const transformOrganizer = (
   engagement: ApiSearchEngagement,
@@ -56,16 +50,6 @@ export const transformEngagement = (imageProxyBaseUrl: string) =>
     latitude: engagement.latitude,
     longitude: engagement.longitude,
   };
-};
-
-const transformEngagementResponse = (imageProxyBaseUrl: string) =>
-(
-  engagementResponse: ApiEngagementResponse,
-): EngagementResponse => {
-  if ("success" in engagementResponse) {
-    return null;
-  }
-  return transformEngagement(imageProxyBaseUrl)(engagementResponse);
 };
 
 const transformEngagementsResponse = (imageProxyBaseUrl: string) =>
@@ -208,47 +192,6 @@ export const trackEngagementView = (voltasticsConfig: VoltasticsConfig) =>
   // Return immediately and run Voltastics API call asynchronously
   return Promise.resolve({ id: params.id });
 };
-
-export const fetchEngagement =
-  (config: ServerConfig) => ({ id }: EngagementParameters): Promise<EngagementResponse> => {
-    const searchParams = new URLSearchParams();
-    searchParams.append("id", id);
-
-    const start = Date.now();
-    logger.info(
-      `fetching engagement ${id} from ${config.voltastics.baseUrl}`,
-    );
-    return fetchFromVoltasticsApi(
-      config.voltastics,
-      ApiRoutes.ENGAGEMENT,
-      searchParams,
-    )
-      .then((response) => {
-        if (response.status === 404) {
-          throw new GraphQLError("Not found", {
-            extensions: { "code": ERROR_CODE_NOT_FOUND },
-          });
-        }
-        return response.json();
-      })
-      .then(transformEngagementResponse(config.imageProxyBaseUrl))
-      .then((result) => {
-        const duration = Date.now() - start;
-        logger.debug(`fetching engagement ${id} took ${duration} ms`);
-        return result;
-      })
-      .catch((e) => {
-        if (e.extensions?.code !== ERROR_CODE_NOT_FOUND) {
-          const duration = Date.now() - start;
-
-          logger.error(
-            `Error performing request to ${config.voltastics.baseUrl} after ${duration} ms: ${e.message}`,
-            { duration },
-          );
-        }
-        throw e;
-      });
-  };
 
 export const fetchCategories = (
   voltasticsConfig: VoltasticsConfig,

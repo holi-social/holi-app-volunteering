@@ -14,8 +14,6 @@ export type ApiSearchEngagement = {
   longitude?: number | null;
 };
 
-export type ApiEngagementResponse = ApiSearchEngagement | { success: boolean };
-
 export type ApiSearchEngagementsResponse =
   | {
     totalEntries: number;
@@ -30,7 +28,6 @@ export type ApiCategoriesResponse = string[];
 export enum ApiRoutes {
   SEARCH_ENGAGEMENTS = "searchengagement",
   TRACK_VIEW = "trackview",
-  ENGAGEMENT = "engagement",
   USES = "uses",
 }
 

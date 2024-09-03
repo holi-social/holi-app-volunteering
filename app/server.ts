@@ -10,7 +10,7 @@ import {
   TrackEngagementViewResponse,
 } from "./types.ts";
 import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
-import { fetchCategories, fetchEngagement, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
+import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
 import { logger } from "./logging.ts";
 import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
 import { GeoAPIClient } from "./geo_api_client.ts";
@@ -106,7 +106,7 @@ const createResolvers = (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementParameters,
-    ): Promise<EngagementResponse> => config.fake ? Promise.resolve(null) : fetchEngagement(config)(parameters),
+    ): Promise<EngagementResponse> => config.fake ? Promise.resolve(null) : volunteeringDB.engagementById(parameters),
     categories: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
