@@ -294,9 +294,12 @@ export class VolunteeringDB {
   }
 
   async engagementById({ id }: EngagementParameters): Promise<EngagementResponse> {
+    const before = Date.now();
     const result = await this.client.queryObject<VolunteeringDBRow>`
       SELECT * FROM volunteering_voltastics_with_classification
       WHERE id = ${id}`;
+    const after = Date.now();
+    logger.debug(`[${(after - before).toString().padStart(4, " ")} ms] Successfully retrieved engagement by ID ${id}`);
     if (result.rows.length < 1) {
       return Promise.reject(
         new GraphQLError("Not found", {
