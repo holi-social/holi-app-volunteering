@@ -1,9 +1,11 @@
 import type { QueryObjectResult } from "./deps.ts";
-import { Client } from "./deps.ts";
+import { Client, GraphQLError } from "./deps.ts";
 import { GeoAPIClient } from "./geo_api_client.ts";
 import {
   Engagement,
+  EngagementParameters,
   EngagementRecommendationsParameters,
+  EngagementResponse,
   EngagementsResponse,
   FilteredEngagementsParameters,
   GeolocationCoordinates,
@@ -21,7 +23,7 @@ export type VolunteeringDBConfig = {
   connectionAttempts: number; // see https://deno-postgres.com/#/?id=database-reconnection
 };
 
-type VolunteeringDBRow = {
+export type VolunteeringDBRow = {
   id: number;
   title: string;
   description: string;
@@ -274,6 +276,8 @@ const extractTotalResultCount = (
   (queryResult.rows.length ? Number(queryResult.rows[0].total_results) : queryResult.rowCount) ??
     0;
 
+const ERROR_CODE_NOT_FOUND = "NOT_FOUND";
+
 export class VolunteeringDB {
   private client: Client;
   private readonly imageProxyBaseUrl: string;
@@ -287,6 +291,22 @@ export class VolunteeringDB {
     this.client = client;
     this.imageProxyBaseUrl = imageProxyBaseUrl;
     this.geoAPIClient = geoAPIClient;
+  }
+
+  async engagementById({ id }: EngagementParameters): Promise<EngagementResponse> {
+    const before = Date.now();
+    const result = await this.client.queryObject<VolunteeringDBRow>`
+      SELECT * FROM volunteering_voltastics_with_classification
+      WHERE id = ${id}`;
+    const after = Date.now();
+    logger.debug(`[${(after - before).toString().padStart(4, " ")} ms] Successfully retrieved engagement by ID ${id}`);
+    if (result.rows.length < 1) {
+      return Promise.reject(
+        new GraphQLError("Not found", {
+          extensions: { "code": ERROR_CODE_NOT_FOUND },
+        }),
+      );
+    } else return toEngagement(this.imageProxyBaseUrl)(result.rows[0]);
   }
 
   async findRecommendations(
