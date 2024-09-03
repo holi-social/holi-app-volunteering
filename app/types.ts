@@ -80,8 +80,12 @@ export type GeolocationCoordinates = {
   lon: number;
 };
 
+export type GeolocationProperties = {
+  formatted: string;
+} & GeolocationCoordinates;
+
 export type GeolocationGeoJSON = {
-  properties: GeolocationCoordinates;
+  properties: GeolocationProperties;
   geometry: GeolocationGeometry;
 };
 

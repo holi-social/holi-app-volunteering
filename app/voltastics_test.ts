@@ -1,8 +1,8 @@
 import {
-  afterEach,
   assertEquals,
   assertRejects,
   assertSpyCall,
+  beforeEach,
   describe,
   it,
   returnsNext,
@@ -94,7 +94,7 @@ const queryEngagement = async (
 const queryCategories = async (
   graphQLServer: GraphQLServer,
 ): Promise<CategoriesResponse> => {
-  const promise = processGqlRequest(
+  const response = await processGqlRequest(
     graphQLServer,
     `
       query categories {
@@ -107,7 +107,7 @@ const queryCategories = async (
     {},
   );
 
-  return (await promise)?.categories as CategoriesResponse;
+  return response?.categories as CategoriesResponse;
 };
 
 const voltasticsConfigMock: VoltasticsConfig = {
@@ -156,7 +156,7 @@ const noCacheServerConfig = {
 describe("voltastics", () => {
   let fetchStub: Stub;
 
-  afterEach(() => {
+  beforeEach(() => {
     fetchStub?.restore();
   });
 
