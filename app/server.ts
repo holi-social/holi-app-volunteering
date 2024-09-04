@@ -9,7 +9,7 @@ import {
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
-import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
+import { createSchema, createYoga, opentelemetry, serve, useResponseCache } from "./deps.ts";
 import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
 import { logger } from "./logging.ts";
 import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
@@ -157,7 +157,7 @@ export interface ServerConfig {
   geoAPIEndpointUrl: string;
 }
 
-export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
+export const createGraphQLServer = (config: ServerConfig, meter: opentelemetry.Meter): GraphQLServer => {
   const plugins = config.cacheEnabled
     ? [
       useResponseCache({
@@ -190,7 +190,7 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
       attempts: config.volunteeringDB.connectionAttempts,
     },
   });
-  const geoAPIClient = new GeoAPIClient(config.geoAPIEndpointUrl);
+  const geoAPIClient = new GeoAPIClient(config.geoAPIEndpointUrl, meter);
   const volunteeringDB = new VolunteeringDB(
     client,
     config.imageProxyBaseUrl,
@@ -208,7 +208,11 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
 export type GraphQLServer = any;
 
 export const startServer = (config: ServerConfig): Promise<void> => {
-  const graphQLServer: GraphQLServer = createGraphQLServer(config);
+  const meter = opentelemetry.metrics.getMeter(
+    "holi-app-volunteering",
+    "1.0", // TODO pass in actual version = git hash
+  );
+  const graphQLServer: GraphQLServer = createGraphQLServer(config, meter);
   return serve(graphQLServer.handleRequest, {
     port: config.port,
     onListen({ port, hostname }) {

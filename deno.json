@@ -8,7 +8,7 @@
       "updateDeps": "deno cache --lock=deno.lock --lock-write app/deps.ts app/dev_deps.ts",
       "install": "deno cache --reload --lock=deno.lock app/deps.ts app/dev_deps.ts",
       "cache": "deno cache app/main.ts",
-      "dev": "deno run --allow-net --allow-env --lock=deno.lock --cached-only --watch app/main.ts",
+      "dev": "deno run --allow-run --allow-sys --allow-read --allow-net --allow-env --lock=deno.lock --cached-only --watch app/main.ts",
       "start": "deno run --allow-net --allow-env --lock=deno.lock --cached-only app/main.ts",
       "docker": "docker build -t volunteering-api . && docker run -it --init -p 8004:8004 volunteering-api",
       "coverage": "deno test --coverage=coverage && deno coverage coverage",

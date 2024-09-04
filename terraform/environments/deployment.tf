@@ -50,6 +50,16 @@ resource "google_cloud_run_service" "volunteering_api" {
     spec {
       service_account_name = data.terraform_remote_state.holi_volunteering_api_common_state.outputs.cloud_run_service_account_email
       containers {
+        image = "${data.terraform_remote_state.holi_infra_state.outputs.artifact_registry_location}/holi-volunteering-api-opentelemetry-sidecar:latest"
+        name = "opentelemetry-collector"
+        startup_probe {
+          http_get {
+            path: "/"
+            port: 13133
+          }
+        }
+      }
+      containers {
         image = "${data.terraform_remote_state.holi_infra_state.outputs.artifact_registry_location}/holi-volunteering-api:${var.image_tag}"
         ports {
           container_port = 8004
@@ -57,6 +67,10 @@ resource "google_cloud_run_service" "volunteering_api" {
         env {
           name  = "ENVIRONMENT"
           value = local.environment
+        }
+        env {
+          name = "OTEL_EXPORTER_OTLP_ENDPOINT"
+          value = "http://localhost:4317"
         }
         env {
           name  = "CACHE_ENABLED"

@@ -1,5 +1,6 @@
 import { GeolocationCoordinates, GeolocationGeometry, GeolocationProperties } from "./types.ts";
 import { logger } from "./logging.ts";
+import { opentelemetry } from "./deps.ts";
 
 type GeoAPIResponse = {
   data?: {
@@ -24,39 +25,55 @@ type GeoAPIAutocompleteResponse = {
 
 export class GeoAPIClient {
   private readonly geoAPIEndpointUrl: string;
+  private readonly meter: opentelemetry.Meter;
 
-  constructor(geoAPIEndpointUrl: string) {
+  constructor(geoAPIEndpointUrl: string, meter: opentelemetry.Meter) {
     this.geoAPIEndpointUrl = geoAPIEndpointUrl;
+    this.meter = meter;
   }
 
-  private async resolveGeolocationViaGeoAPI(
+  private async timed<T>(name: string, fn: () => Promise<T>): Promise<T> {
+    const histogram = this.meter.createHistogram(name);
+    const before = new Date().getTime();
+    const result = await fn();
+    const duration = new Date().getTime() - before;
+    logger.debug(`[${duration.toString().padStart(4, " ")} ms] ${name}`);
+    histogram.record(duration);
+    return result;
+  }
+
+  private resolveGeolocationViaGeoAPI(
     geolocationId: string,
   ): Promise<GeoAPIResponse> {
-    const graphQLQuery = `{ placeDetails(id: "${geolocationId}") { geolocation } }`;
-    const response = await fetch(this.geoAPIEndpointUrl, {
-      "body": JSON.stringify({ query: graphQLQuery }),
-      "headers": {
-        "Accept": "application/graphql-response+json, application/json",
-        "Content-Type": "application/json",
-      },
-      "method": "POST",
+    return this.timed("geo_api_client.resolveGeolocationViaGeoAPI", async () => {
+      const graphQLQuery = `{ placeDetails(id: "${geolocationId}") { geolocation } }`;
+      const response = await fetch(this.geoAPIEndpointUrl, {
+        "body": JSON.stringify({ query: graphQLQuery }),
+        "headers": {
+          "Accept": "application/graphql-response+json, application/json",
+          "Content-Type": "application/json",
+        },
+        "method": "POST",
+      });
+      return (await response.json()) as GeoAPIResponse;
     });
-    return response.json() as GeoAPIResponse;
   }
 
-  private async resolvePlaceIdByName(name: string): Promise<string | undefined> {
-    const graphQLQuery = `{ placesAutocomplete(text: "${name}", limit: 1) { id } }`;
-    const response = await fetch(this.geoAPIEndpointUrl, {
-      "body": JSON.stringify({ query: graphQLQuery }),
-      "headers": {
-        "Accept": "application/graphql-response+json, application/json",
-        "Content-Type": "application/json",
-      },
-      "method": "POST",
+  private resolvePlaceIdByName(name: string): Promise<string | undefined> {
+    return this.timed("geo_api_client.resolvePlaceIdByName", async () => {
+      const graphQLQuery = `{ placesAutocomplete(text: "${name}", limit: 1) { id } }`;
+      const response = await fetch(this.geoAPIEndpointUrl, {
+        "body": JSON.stringify({ query: graphQLQuery }),
+        "headers": {
+          "Accept": "application/graphql-response+json, application/json",
+          "Content-Type": "application/json",
+        },
+        "method": "POST",
+      });
+      const { data } = await response.json() as GeoAPIAutocompleteResponse;
+      const [place] = data?.placesAutocomplete || [];
+      return place?.id;
     });
-    const { data } = await response.json() as GeoAPIAutocompleteResponse;
-    const [place] = data?.placesAutocomplete || [];
-    return place?.id;
   }
 
   async resolveCoordinates(

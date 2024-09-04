@@ -8,6 +8,7 @@ import {
   ServerConfig,
   startServer,
 } from "./server.ts";
+import { setupInstrumentation } from "./instrumentation.ts";
 
 const environment = Deno.env.get("ENVIRONMENT") || "development";
 
@@ -105,4 +106,5 @@ const serverConfigFromEnv = (): ServerConfig => {
 };
 
 const config = serverConfigFromEnv();
+setupInstrumentation();
 await startServer(config);
