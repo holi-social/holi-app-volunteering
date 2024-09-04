@@ -54,6 +54,13 @@ resource "google_cloud_run_service" "volunteering_api" {
         ports {
           container_port = 8004
         }
+        liveness_probe {
+          http_get {
+            path = "/liveness"
+          }
+          timeout_seconds = 10
+          period_seconds = 60
+        }
         env {
           name  = "ENVIRONMENT"
           value = local.environment
