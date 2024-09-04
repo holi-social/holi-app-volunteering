@@ -11,7 +11,14 @@ import {
 } from "./dev_deps.ts";
 import { processGqlRequest, stubFetch } from "./common_test.ts";
 
-import { CategoriesResponse, EngagementsResponse } from "./types.ts";
+import {
+  CategoriesResponse,
+  EngagementParameters,
+  EngagementRecommendationsParameters,
+  EngagementResponse,
+  EngagementsResponse,
+  FilteredEngagementsParameters,
+} from "./types.ts";
 import { createGraphQLServer, GraphQLServer, ServerConfig, VoltasticsConfig } from "./server.ts";
 
 import {
@@ -22,6 +29,7 @@ import {
   Munich,
 } from "./voltastics_test_data.ts";
 import { fetchCategories, fetchEngagementOpportunities } from "./voltastics.ts";
+import { VolunteeringDB } from "./volunteering_db.ts";
 
 const emptyResponse = {
   success: true,
@@ -133,6 +141,18 @@ const noCacheServerConfig = {
   geoAPIEndpointUrl: "fakeUrl",
 };
 
+const fakeVolunteeringDB = new (class implements VolunteeringDB {
+  public engagementById(_params: EngagementParameters): Promise<EngagementResponse> {
+    return Promise.reject(new Error("should not have been called"));
+  }
+  findRecommendations(_params: EngagementRecommendationsParameters): Promise<EngagementsResponse> {
+    return Promise.reject(new Error("should not have been called"));
+  }
+  filterEngagements(_params: FilteredEngagementsParameters): Promise<EngagementsResponse> {
+    return Promise.reject(new Error("should not have been called"));
+  }
+})();
+
 describe("voltastics", () => {
   let fetchStub: Stub;
 
@@ -194,7 +214,7 @@ describe("voltastics", () => {
     it("correctly parses engagement list", async () => {
       fetchStub = stubFetch(validEngagementsResponse);
 
-      const graphQLServer = createGraphQLServer(noCacheServerConfig);
+      const graphQLServer = createGraphQLServer(noCacheServerConfig, fakeVolunteeringDB);
 
       const result = await queryEngagementOpportunities(graphQLServer);
 
@@ -222,7 +242,7 @@ describe("voltastics", () => {
     it("correctly parses category list", async () => {
       fetchStub = stubFetch(apiCategoriesResponse);
 
-      const graphQLServer = createGraphQLServer(noCacheServerConfig);
+      const graphQLServer = createGraphQLServer(noCacheServerConfig, fakeVolunteeringDB);
 
       const result = await queryCategories(graphQLServer);
 

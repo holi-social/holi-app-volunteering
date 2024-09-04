@@ -9,10 +9,10 @@ import {
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
-import { createSchema, createYoga, serve, useResponseCache } from "./deps.ts";
+import { createSchema, createYoga, deadline, DeadlineError, useResponseCache } from "./deps.ts";
 import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
 import { logger } from "./logging.ts";
-import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
+import { PostgresVolunteeringDB, VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
 import { GeoAPIClient } from "./geo_api_client.ts";
 import { Client } from "https://deno.land/x/postgres@v0.19.3/client.ts";
 
@@ -157,7 +157,7 @@ export interface ServerConfig {
   geoAPIEndpointUrl: string;
 }
 
-export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
+export const createGraphQLServer = (config: ServerConfig, volunteeringDB: VolunteeringDB): GraphQLServer => {
   const plugins = config.cacheEnabled
     ? [
       useResponseCache({
@@ -172,6 +172,36 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
       }),
     ]
     : [];
+  const resolvers = createResolvers(config, volunteeringDB);
+  return createYoga({
+    schema: createSchema({ resolvers, typeDefs }),
+    graphiql: true,
+    plugins,
+  });
+};
+
+// deno-lint-ignore no-explicit-any
+export type GraphQLServer = any;
+
+const isDbConnectionAlive = async (client: Client): Promise<Response> => {
+  const timeout = 10_000;
+  try {
+    const resultP = client.queryObject<{ db_connection_is_alive: boolean }>`SELECT true as db_connection_is_alive`;
+    const result = await deadline(resultP, timeout);
+    const alive = result.rowCount && result.rowCount > 0 && result.rows[0].db_connection_is_alive || false;
+    return new Response(`${alive}`);
+  } catch (e) {
+    if (e instanceof DeadlineError) {
+      console.error(`Liveness check timed out after ${timeout} ms`);
+      return new Response(null, { status: 503 });
+    } else {
+      console.error("Liveness check failed, reason: ", e);
+      return new Response(null, { status: 500 });
+    }
+  }
+};
+
+export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr> => {
   const client = new Client({
     hostname: config.volunteeringDB.hostname,
     port: config.volunteeringDB.port,
@@ -191,26 +221,21 @@ export const createGraphQLServer = (config: ServerConfig): GraphQLServer => {
     },
   });
   const geoAPIClient = new GeoAPIClient(config.geoAPIEndpointUrl);
-  const volunteeringDB = new VolunteeringDB(
+  const volunteeringDB = new PostgresVolunteeringDB(
     client,
     config.imageProxyBaseUrl,
     geoAPIClient,
   );
-  const resolvers = createResolvers(config, volunteeringDB);
-  return createYoga({
-    schema: createSchema({ resolvers, typeDefs }),
-    graphiql: true,
-    plugins,
-  });
-};
-
-// deno-lint-ignore no-explicit-any
-export type GraphQLServer = any;
-
-export const startServer = (config: ServerConfig): Promise<void> => {
-  const graphQLServer: GraphQLServer = createGraphQLServer(config);
-  return serve(graphQLServer.handleRequest, {
+  const graphQLServer: GraphQLServer = createGraphQLServer(config, volunteeringDB);
+  return Deno.serve({
     port: config.port,
+    hostname: "0.0.0.0",
+    handler: (req: Request) => {
+      const url = new URL(req.url);
+      console.debug(url.pathname);
+      if (url.pathname.startsWith("/liveness")) return isDbConnectionAlive(client);
+      else return graphQLServer.handleRequest(req);
+    },
     onListen({ port, hostname }) {
       logger.info(
         `Server started at http://${hostname === "0.0.0.0" ? "localhost" : hostname}:${port}/graphql`,

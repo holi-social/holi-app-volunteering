@@ -9,7 +9,7 @@ import {
   Stub,
   stub,
 } from "./dev_deps.ts";
-import { exportedForTesting, VolunteeringDB, VolunteeringDBRow } from "./volunteering_db.ts";
+import { exportedForTesting, PostgresVolunteeringDB, VolunteeringDB, VolunteeringDBRow } from "./volunteering_db.ts";
 import { Client, GraphQLError } from "./deps.ts";
 import { GeoAPIClient } from "./geo_api_client.ts";
 
@@ -58,7 +58,7 @@ const withMockedDependencies = (queryObjectResult: VolunteeringDBRow[] = []) =>
     "resolveGeometry",
     returnsNext([Promise.resolve(testGeometry)]),
   );
-  const volunteeringDB = new VolunteeringDB(
+  const volunteeringDB = new PostgresVolunteeringDB(
     mockClient,
     "mock-image-proxy-base-url",
     mockedGeoApiClient,
