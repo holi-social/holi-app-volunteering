@@ -293,7 +293,13 @@ const extractTotalResultCount = (
 
 const ERROR_CODE_NOT_FOUND = "NOT_FOUND";
 
-export class VolunteeringDB {
+export interface VolunteeringDB {
+  engagementById(params: EngagementParameters): Promise<EngagementResponse>;
+  findRecommendations(params: EngagementRecommendationsParameters): Promise<EngagementsResponse>;
+  filterEngagements(params: FilteredEngagementsParameters): Promise<EngagementsResponse>;
+}
+
+export class PostgresVolunteeringDB implements VolunteeringDB {
   private client: Client;
   private readonly imageProxyBaseUrl: string;
   private geoAPIClient: GeoAPIClient;
