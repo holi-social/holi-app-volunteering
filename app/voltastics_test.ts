@@ -9,7 +9,7 @@ import {
   Stub,
   stub,
 } from "./dev_deps.ts";
-import { processGqlRequest, stubFetch } from "./common_test.ts";
+import { meterMock, processGqlRequest, stubFetch } from "./common_test.ts";
 
 import { CategoriesResponse, EngagementsResponse } from "./types.ts";
 import { createGraphQLServer, GraphQLServer, ServerConfig, VoltasticsConfig } from "./server.ts";
@@ -194,7 +194,7 @@ describe("voltastics", () => {
     it("correctly parses engagement list", async () => {
       fetchStub = stubFetch(validEngagementsResponse);
 
-      const graphQLServer = createGraphQLServer(noCacheServerConfig);
+      const graphQLServer = createGraphQLServer(noCacheServerConfig, meterMock);
 
       const result = await queryEngagementOpportunities(graphQLServer);
 
@@ -222,7 +222,7 @@ describe("voltastics", () => {
     it("correctly parses category list", async () => {
       fetchStub = stubFetch(apiCategoriesResponse);
 
-      const graphQLServer = createGraphQLServer(noCacheServerConfig);
+      const graphQLServer = createGraphQLServer(noCacheServerConfig, meterMock);
 
       const result = await queryCategories(graphQLServer);
 

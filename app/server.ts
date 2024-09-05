@@ -15,6 +15,8 @@ import { logger } from "./logging.ts";
 import { VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
 import { GeoAPIClient } from "./geo_api_client.ts";
 import { Client } from "https://deno.land/x/postgres@v0.19.3/client.ts";
+import { asBoolean, requiredEnv } from "./config.ts";
+import { environmentFromEnv } from "./environment.ts";
 
 const typeDefs = `
     type Organizer {
@@ -145,6 +147,7 @@ export interface VoltasticsConfig {
   baseUrl: string;
   apiToken: string;
 }
+
 export interface ServerConfig {
   port: number; // default: 8004
   cacheEnabled: boolean; // default: true
@@ -156,6 +159,80 @@ export interface ServerConfig {
   volunteeringDB: VolunteeringDBConfig;
   geoAPIEndpointUrl: string;
 }
+
+export const serverConfigFromEnv = (): ServerConfig => {
+  const environment = environmentFromEnv();
+  const fake = requiredEnv("FAKE", asBoolean, false); // For local development. If set, the API returns dummy data
+  return {
+    port: requiredEnv("PORT", Number, DEFAULT_PORT),
+    cacheEnabled: requiredEnv(
+      "CACHE_ENABLED",
+      asBoolean,
+      DEFAULT_CACHE_ENABLED,
+    ),
+    cacheTtlMsVoltastics: requiredEnv(
+      "DEFAULT_CACHE_TTL_MS_VOLTASTICS",
+      Number,
+      DEFAULT_CACHE_TTL_MS_VOLTASTICS,
+    ),
+    cacheTtlMsDB: requiredEnv(
+      "DEFAULT_CACHE_TTL_MS_DB",
+      Number,
+      DEFAULT_CACHE_TTL_MS_DB,
+    ),
+    voltastics: {
+      baseUrl: requiredEnv(
+        "VOLUNTEERING_VOLTASTICS_API_URL",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
+      apiToken: requiredEnv(
+        "VOLUNTEERING_VOLTASTICS_API_KEY",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
+    },
+    imageProxyBaseUrl: requiredEnv(
+      "IMAGE_PROXY_BASE_URL",
+      String,
+      environment === "production" ? "https://images.holi.social" : "https://dev-images.holi.social",
+    ),
+    volunteeringDB: {
+      hostname: requiredEnv(
+        "DB_HOST",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
+      port: requiredEnv("DB_PORT", String, fake ? "31337" : undefined),
+      database: requiredEnv(
+        "DB_NAME",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
+      username: requiredEnv(
+        "DB_USERNAME",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
+      password: requiredEnv(
+        "DB_PASSWORD",
+        String,
+        fake ? "dummy value" : undefined,
+      ),
+      connectionAttempts: requiredEnv(
+        "DB_CONNECTION_ATTEMPTS",
+        Number,
+        DEFAULT_DB_CONNECTION_ATTEMPTS,
+      ),
+    },
+    fake,
+    geoAPIEndpointUrl: requiredEnv(
+      "GEO_API_ENDPOINT_URL",
+      String,
+      fake ? "dummy value" : undefined,
+    ),
+  };
+};
 
 export const createGraphQLServer = (config: ServerConfig, meter: opentelemetry.Meter): GraphQLServer => {
   const plugins = config.cacheEnabled
@@ -207,11 +284,7 @@ export const createGraphQLServer = (config: ServerConfig, meter: opentelemetry.M
 // deno-lint-ignore no-explicit-any
 export type GraphQLServer = any;
 
-export const startServer = (config: ServerConfig): Promise<void> => {
-  const meter = opentelemetry.metrics.getMeter(
-    "holi-app-volunteering",
-    "1.0", // TODO pass in actual version = git hash
-  );
+export const startServer = (config: ServerConfig, meter: opentelemetry.Meter): Promise<void> => {
   const graphQLServer: GraphQLServer = createGraphQLServer(config, meter);
   return serve(graphQLServer.handleRequest, {
     port: config.port,

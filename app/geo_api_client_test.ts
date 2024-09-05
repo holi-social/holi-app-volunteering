@@ -1,4 +1,4 @@
-import { stubFetch, stubFetchWithResponses } from "./common_test.ts";
+import { meterMock, stubFetch, stubFetchWithResponses } from "./common_test.ts";
 import { assertRejects, restore } from "./dev_deps.ts";
 import { assertEquals, beforeEach, describe, it } from "./dev_deps.ts";
 import { GeoAPIClient } from "./geo_api_client.ts";
@@ -57,7 +57,7 @@ describe("GeoAPIClient", () => {
 
   beforeEach(() => {
     restore();
-    client = new GeoAPIClient(testEndpointUrl);
+    client = new GeoAPIClient(testEndpointUrl, meterMock);
   });
 
   describe("resolveGeometry", () => {

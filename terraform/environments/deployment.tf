@@ -54,8 +54,8 @@ resource "google_cloud_run_service" "volunteering_api" {
         name = "opentelemetry-collector"
         startup_probe {
           http_get {
-            path: "/"
-            port: 13133
+            path = "/"
+            port = 13133
           }
         }
       }

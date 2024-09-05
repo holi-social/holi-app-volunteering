@@ -1,6 +1,7 @@
 import { GeolocationCoordinates, GeolocationGeometry, GeolocationProperties } from "./types.ts";
 import { logger } from "./logging.ts";
 import { opentelemetry } from "./deps.ts";
+import { timed } from "./instrumentation.ts";
 
 type GeoAPIResponse = {
   data?: {
@@ -32,20 +33,10 @@ export class GeoAPIClient {
     this.meter = meter;
   }
 
-  private async timed<T>(name: string, fn: () => Promise<T>): Promise<T> {
-    const histogram = this.meter.createHistogram(name);
-    const before = new Date().getTime();
-    const result = await fn();
-    const duration = new Date().getTime() - before;
-    logger.debug(`[${duration.toString().padStart(4, " ")} ms] ${name}`);
-    histogram.record(duration);
-    return result;
-  }
-
   private resolveGeolocationViaGeoAPI(
     geolocationId: string,
   ): Promise<GeoAPIResponse> {
-    return this.timed("geo_api_client.resolveGeolocationViaGeoAPI", async () => {
+    return timed(this.meter, "geo_api_client.resolveGeolocationViaGeoAPI", async () => {
       const graphQLQuery = `{ placeDetails(id: "${geolocationId}") { geolocation } }`;
       const response = await fetch(this.geoAPIEndpointUrl, {
         "body": JSON.stringify({ query: graphQLQuery }),
@@ -60,7 +51,7 @@ export class GeoAPIClient {
   }
 
   private resolvePlaceIdByName(name: string): Promise<string | undefined> {
-    return this.timed("geo_api_client.resolvePlaceIdByName", async () => {
+    return timed(this.meter, "geo_api_client.resolvePlaceIdByName", async () => {
       const graphQLQuery = `{ placesAutocomplete(text: "${name}", limit: 1) { id } }`;
       const response = await fetch(this.geoAPIEndpointUrl, {
         "body": JSON.stringify({ query: graphQLQuery }),

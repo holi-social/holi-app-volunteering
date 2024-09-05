@@ -13,4 +13,4 @@ COPY ./app ./app
 RUN deno cache --lock=deno.lock app/deps.ts app/dev_deps.ts
 RUN deno cache --lock=deno.lock app/main.ts
 
-CMD ["deno", "run", "--allow-net", "--allow-env", "--lock=deno.lock", "--cached-only", "app/main.ts"]
+CMD ["deno", "run", "--allow-run", "--allow-sys", "--allow-read", "--allow-net", "--allow-env", "--lock=deno.lock", "--cached-only", "app/main.ts"]

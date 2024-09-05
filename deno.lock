@@ -11,6 +11,7 @@
       "npm:@opentelemetry/sdk-node": "npm:@opentelemetry/sdk-node@0.53.0_@opentelemetry+api@1.9.0",
       "npm:@opentelemetry/sdk-trace-node": "npm:@opentelemetry/sdk-trace-node@1.26.0_@opentelemetry+api@1.9.0",
       "npm:@opentelemetry/semantic-conventions": "npm:@opentelemetry/semantic-conventions@1.27.0",
+      "npm:@types/node": "npm:@types/node@18.16.19",
       "npm:graphql-yoga@5.1.1": "npm:graphql-yoga@5.1.1_graphql@16.8.1",
       "npm:graphql@16.8.1": "npm:graphql@16.8.1"
     },
@@ -554,6 +555,10 @@
       },
       "@repeaterjs/repeater@3.0.6": {
         "integrity": "sha512-Javneu5lsuhwNCryN+pXH93VPQ8g0dBX7wItHFgYiwQmzE1sVdg5tWHiOgHywzL2W21XQopa7IwIEnNbmeUJYA==",
+        "dependencies": {}
+      },
+      "@types/node@18.16.19": {
+        "integrity": "sha512-IXl7o+R9iti9eBW4Wg2hx1xQDig183jj7YLn8F7udNceyfkbn1ZxmzZXuak20gR40D7pIkIY1kYGx5VIGbaHKA==",
         "dependencies": {}
       },
       "@types/node@22.5.3": {

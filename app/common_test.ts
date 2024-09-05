@@ -1,5 +1,13 @@
 import { returnsNext, stub } from "./dev_deps.ts";
 import { GraphQLServer } from "./server.ts";
+import { opentelemetry } from "./deps.ts";
+
+export const meterMock: opentelemetry.Meter = {
+  createHistogram: (_name: string) =>
+    new (class {
+      record<AttributesTypes>(_value: number, _attributes?: AttributesTypes, _context?: opentelemetry.Context): void {}
+    })(),
+} as unknown as opentelemetry.Meter;
 
 export type ResponsePayload = Record<string, unknown> | Array<unknown> | Error;
 
