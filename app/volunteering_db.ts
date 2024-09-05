@@ -186,11 +186,20 @@ const sortMatches = (
   ];
 };
 
+/**
+ * Decodes matches from embedding into a string[] containing topic slugs and skills slugs. Results are sorted as follows:
+ * * according to `sortMatches` function if queriedTopics & queriedSkills are non-empty
+ * * by confidence DESC otherwise
+ *
+ * @param embedding
+ * @param queriedTopics
+ * @param queriedSkills
+ */
 const decodeMatchesFromEmbedding = (
   embedding: number[],
   queriedTopics: string[],
   queriedSkills: string[],
-): { matchedTopics: string[]; matchedSkills: string[] } => {
+): { topics: string[]; skills: string[] } => {
   if (embedding.length != EMBEDDING_DIMENSIONS) {
     logger.warn(
       `Received embedding of dimension ${embedding.length}, expected ${EMBEDDING_DIMENSIONS}`,
@@ -212,10 +221,10 @@ const decodeMatchesFromEmbedding = (
 
   const withoutConfidence = (a: [string, number]) => a[0];
   return {
-    matchedTopics: sortMatches(queriedTopics, matchedTopicsWithConfidence).map(
+    topics: sortMatches(queriedTopics, matchedTopicsWithConfidence).map(
       withoutConfidence,
     ),
-    matchedSkills: sortMatches(queriedSkills, matchedSkillsWithConfidence).map(
+    skills: sortMatches(queriedSkills, matchedSkillsWithConfidence).map(
       withoutConfidence,
     ),
   };
@@ -231,15 +240,20 @@ export const exportedForTesting = {
 
 const toEngagement = (
   imageProxyBaseUrl: string,
-  queriedTopics: string[] = [],
-  queriedSkills: string[] = [],
-) =>
-(row: VolunteeringDBRow): Engagement => {
-  const { matchedTopics, matchedSkills } = decodeMatchesFromEmbedding(
-    JSON.parse(row.embedding_array) as number[],
-    queriedTopics,
-    queriedSkills,
-  );
+  row: VolunteeringDBRow,
+  options: {
+    addQueryMatchInfo: false;
+  } | {
+    addQueryMatchInfo: true;
+    queriedTopics: string[];
+    queriedSkills: string[];
+  },
+): Engagement => {
+  const embedding = JSON.parse(row.embedding_array) as number[];
+  const { topics: matchedTopics, skills: matchedSkills } = options.addQueryMatchInfo
+    ? decodeMatchesFromEmbedding(embedding, options.queriedTopics, options.queriedSkills)
+    : { topics: undefined, skills: undefined };
+  const { topics, skills } = decodeMatchesFromEmbedding(embedding, [], []);
   return {
     id: "" + row.id,
     title: row.title,
@@ -263,7 +277,8 @@ const toEngagement = (
     location: row.location,
     latitude: row.latitude,
     longitude: row.longitude,
-
+    topics: topics,
+    skills: skills,
     matchedTopics,
     matchedSkills,
     matchedGeoLocationDistanceInMeters: row.distance_in_meters,
@@ -306,7 +321,10 @@ export class VolunteeringDB {
           extensions: { "code": ERROR_CODE_NOT_FOUND },
         }),
       );
-    } else return toEngagement(this.imageProxyBaseUrl)(result.rows[0]);
+    } else {
+      const row = result.rows[0];
+      return toEngagement(this.imageProxyBaseUrl, row, { addQueryMatchInfo: false });
+    }
   }
 
   async findRecommendations(
@@ -322,8 +340,12 @@ export class VolunteeringDB {
       logger.error("Error retrieving recommendations. Reason: ", reason);
       throw reason;
     });
-    const recos = result.rows.map(
-      toEngagement(this.imageProxyBaseUrl, topics, skills),
+    const recos = result.rows.map((row) =>
+      toEngagement(this.imageProxyBaseUrl, row, {
+        addQueryMatchInfo: true,
+        queriedTopics: topics,
+        queriedSkills: skills,
+      })
     );
     return Promise.resolve({
       totalResults: extractTotalResultCount(result),
@@ -578,7 +600,7 @@ export class VolunteeringDB {
 
     return {
       totalResults,
-      data: result.rows.map(toEngagement(this.imageProxyBaseUrl)),
+      data: result.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row, { addQueryMatchInfo: false })),
     };
   }
 }

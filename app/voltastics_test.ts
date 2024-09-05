@@ -45,6 +45,8 @@ organizer {
 location
 latitude
 longitude
+topics
+skills
 `;
 
 const categoryFragment = `

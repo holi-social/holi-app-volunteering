@@ -20,6 +20,9 @@ export type Engagement = {
   latitude?: number | null;
   longitude?: number | null;
 
+  topics: string[];
+  skills: string[];
+
   matchedTopics?: string[];
   matchedSkills?: string[];
   matchedGeoLocationDistanceInMeters?: number;

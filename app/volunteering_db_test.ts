@@ -131,8 +131,8 @@ describe("VolunteeringDB", () => {
         allTopics,
         allSkills,
       );
-      assertEquals(matches.matchedTopics, expectedMatchedTopics);
-      assertEquals(matches.matchedSkills, expectedMatchedSkills);
+      assertEquals(matches.topics, expectedMatchedTopics);
+      assertEquals(matches.skills, expectedMatchedSkills);
     });
     it("filters out topics and skills matches with confidence below MATCH_CONFIDENCE_THRESHOLD", () => {
       // deno-fmt-ignore
@@ -167,8 +167,8 @@ describe("VolunteeringDB", () => {
         allTopics,
         allSkills,
       );
-      assertEquals(matches.matchedTopics, expectedMatchedTopics);
-      assertEquals(matches.matchedSkills, expectedMatchedSkills);
+      assertEquals(matches.topics, expectedMatchedTopics);
+      assertEquals(matches.skills, expectedMatchedSkills);
     });
     it("ranks topics and skills matches queried for higher", () => {
       // deno-fmt-ignore
@@ -202,8 +202,8 @@ describe("VolunteeringDB", () => {
         queriedTopics,
         queriedSkills,
       );
-      assertEquals(matches.matchedTopics, expectedMatchedTopics);
-      assertEquals(matches.matchedSkills, expectedMatchedSkills);
+      assertEquals(matches.topics, expectedMatchedTopics);
+      assertEquals(matches.skills, expectedMatchedSkills);
     });
   });
 
@@ -277,16 +277,18 @@ describe("VolunteeringDB", () => {
         assertEquals(response?.location, dbRow.location);
         assertEquals(response?.latitude, dbRow.latitude);
         assertEquals(response?.longitude, dbRow.longitude);
-        assertEquals(response?.matchedTopics, [
+        assertEquals(response?.topics, [
           "agriculture-food", // first item (index 0)
           "disabilities-inclusion", // tenth item (index 9)
           "water-ocean", // last item  (index 27)
         ]);
-        assertEquals(response?.matchedSkills, [
+        assertEquals(response?.skills, [
           "adaptability", // first item (index 0)
           "conflict-management", // tenth item (index 9)
           "writing-translation", // last item  (index 49)
         ]);
+        assertEquals(response?.matchedTopics, undefined);
+        assertEquals(response?.matchedSkills, undefined);
         assertEquals(response?.matchedGeoLocationDistanceInMeters, 0);
       });
     });

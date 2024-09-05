@@ -41,6 +41,16 @@ const typeDefs = `
       longitude: Float
       
       """
+      An array of topic slugs matching the engagement. Ordered by confidence DESC (typically, may be subject to change). 
+      """
+      topics: [String]
+      
+      """
+      An array of skill slugs matching the engagement. Ordered by confidence DESC (typically, may be subject to change).
+      """
+      skills: [String]
+      
+      """
       If this engagement is part of a recommendation query response, matchedTopics contains the slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
       matchedTopics: [String]
