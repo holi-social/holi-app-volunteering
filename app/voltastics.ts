@@ -49,6 +49,8 @@ export const transformEngagement = (imageProxyBaseUrl: string) =>
     location: engagement.location,
     latitude: engagement.latitude,
     longitude: engagement.longitude,
+    topics: [],
+    skills: [],
   };
 };
 
