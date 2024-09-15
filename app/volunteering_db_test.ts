@@ -12,6 +12,13 @@ import {
 import { exportedForTesting, PostgresVolunteeringDB, VolunteeringDB, VolunteeringDBRow } from "./volunteering_db.ts";
 import { Client, GraphQLError } from "./deps.ts";
 import { GeoAPIClient } from "./geo_api_client.ts";
+import { Engagement } from "./types.ts";
+import { logger, LogSeverity } from "./logging.ts";
+
+logger.setUpLogger(
+  "development",
+  LogSeverity.EMERGENCY,
+);
 
 // taken from https://stackoverflow.com/a/2450976 ("Fisher-Yates Shuffle")
 function shuffle<A>(array: A[]): A[] {
@@ -64,6 +71,75 @@ const withMockedDependencies = (queryObjectResult: VolunteeringDBRow[] = []) =>
     mockedGeoApiClient,
   );
   test(volunteeringDB, mockedGeoApiClient);
+};
+
+const embeddingFixtures = {
+  // deno-fmt-ignore
+  embedding_array: [
+    1,0,0,0,0,0,0,0,0,1,
+    0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,1,
+    1,0,0,0,0,0,0,0,0,1,
+    0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,1,
+  ],
+};
+
+const dbFixtures = {
+  row1: {
+    id: 1,
+    title: "moin",
+    description: "moin blabla",
+    link: "https://moin.bla",
+    image: "https://moin.bla/blub.jpg",
+    source: "moin_bla",
+    uses: "blib",
+    orga: "blob",
+    imageorga: "https://moin.bla/blob.jpg",
+    location: "Blibhausen",
+    latitude: 12.3456,
+    longitude: 65.4321,
+    embedding_array: JSON.stringify(embeddingFixtures.embedding_array),
+    cosine_similarity: 0,
+    distance_in_meters: 0,
+    total_results: 1,
+  } as VolunteeringDBRow,
+};
+
+const assertEngagementMatchesRow = (row: VolunteeringDBRow, engagement: Engagement) => {
+  assertEquals(engagement.id, `${row.id}`);
+  assertEquals(engagement.title, row.title);
+  assertEquals(engagement.description, row.description);
+  assertEquals(engagement.url, row.link);
+  assertEquals(
+    engagement.imageUrl,
+    "mock-image-proxy-base-url/crop:0:0/resize:auto:1024/plain/" + encodeURIComponent(row.image!),
+  );
+  assertEquals(engagement.imageUrlOriginal, row.image);
+  assertEquals(engagement.source, row.source);
+  assertEquals(engagement.categories, undefined);
+  assertEquals(engagement.organizer, {
+    name: row.orga,
+    imageUrl: row.imageorga,
+  });
+  assertEquals(engagement.location, row.location);
+  assertEquals(engagement.latitude, row.latitude);
+  assertEquals(engagement.longitude, row.longitude);
+  assertEquals(engagement.topics, [
+    "agriculture-food", // first item (index 0)
+    "disabilities-inclusion", // tenth item (index 9)
+    "water-ocean", // last item  (index 27)
+  ]);
+  assertEquals(engagement.skills, [
+    "adaptability", // first item (index 0)
+    "conflict-management", // tenth item (index 9)
+    "writing-translation", // last item  (index 49)
+  ]);
+  assertEquals(engagement.matchedTopics, undefined);
+  assertEquals(engagement.matchedSkills, undefined);
+  assertEquals(engagement.matchedGeoLocationDistanceInMeters, undefined);
 };
 
 describe("VolunteeringDB", () => {
@@ -228,68 +304,9 @@ describe("VolunteeringDB", () => {
 
   describe("querying engagement by id", () => {
     it("correctly parses engagement", () => {
-      // deno-fmt-ignore
-      const embedding_array = [
-        1,0,0,0,0,0,0,0,0,1,
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,1,
-        1,0,0,0,0,0,0,0,0,1,
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,1,
-      ]
-      const dbRow: VolunteeringDBRow = {
-        id: 1,
-        title: "moin",
-        description: "moin blabla",
-        link: "https://moin.bla",
-        image: "https://moin.bla/blub.jpg",
-        source: "moin_bla",
-        uses: "blib",
-        orga: "blob",
-        imageorga: "https://moin.bla/blob.jpg",
-        location: "Blibhausen",
-        latitude: 12.3456,
-        longitude: 65.4321,
-        embedding_array: JSON.stringify(embedding_array),
-        cosine_similarity: 0,
-        distance_in_meters: 0,
-        total_results: 1,
-      };
-      withMockedDependencies([dbRow])(async (volunteeringDB) => {
+      withMockedDependencies([dbFixtures.row1])(async (volunteeringDB) => {
         const response = await volunteeringDB.engagementById({ id: "1" });
-        assertEquals(response?.id, `${dbRow.id}`);
-        assertEquals(response?.title, dbRow.title);
-        assertEquals(response?.description, dbRow.description);
-        assertEquals(response?.url, dbRow.link);
-        assertEquals(
-          response?.imageUrl,
-          "mock-image-proxy-base-url/crop:0:0/resize:auto:1024/plain/" + encodeURIComponent(dbRow.image!),
-        );
-        assertEquals(response?.imageUrlOriginal, dbRow.image);
-        assertEquals(response?.source, dbRow.source);
-        assertEquals(response?.categories, undefined);
-        assertEquals(response?.organizer, {
-          name: dbRow.orga,
-          imageUrl: dbRow.imageorga,
-        });
-        assertEquals(response?.location, dbRow.location);
-        assertEquals(response?.latitude, dbRow.latitude);
-        assertEquals(response?.longitude, dbRow.longitude);
-        assertEquals(response?.topics, [
-          "agriculture-food", // first item (index 0)
-          "disabilities-inclusion", // tenth item (index 9)
-          "water-ocean", // last item  (index 27)
-        ]);
-        assertEquals(response?.skills, [
-          "adaptability", // first item (index 0)
-          "conflict-management", // tenth item (index 9)
-          "writing-translation", // last item  (index 49)
-        ]);
-        assertEquals(response?.matchedTopics, undefined);
-        assertEquals(response?.matchedSkills, undefined);
-        assertEquals(response?.matchedGeoLocationDistanceInMeters, 0);
+        assertEngagementMatchesRow(dbFixtures.row1, response!);
       });
     });
 
@@ -300,7 +317,7 @@ describe("VolunteeringDB", () => {
       });
     });
   });
-
+  // TODO findRecommendations is deprecated, can be removed after clients are migrated to findRecommendationsV2
   describe("findRecommendations", () => {
     it("resolves latitude/longitude using the GeoAPI client when geolocationId is given", () => {
       withMockedDependencies()(
@@ -363,6 +380,109 @@ describe("VolunteeringDB", () => {
           await assertRejects(
             () =>
               volunteeringDB.findRecommendations({
+                limit: 10,
+                offset: 0,
+                topics: [],
+                skills: [],
+                geolocationId: "mock-geolocation-id",
+              }),
+            Error,
+            "geo location resolution failed and no topics or skills given",
+          );
+        },
+      );
+    });
+  });
+  describe("findRecos", () => {
+    it("wraps search results with matchedTopics, matchedSkills and matchedGeoLocationDistanceInMeters", () => {
+      withMockedDependencies([dbFixtures.row1])(async (volunteeringDB, _geoApiClient) => {
+        const response = await volunteeringDB.findRecos({
+          limit: 10,
+          offset: 0,
+          topics: ["disabilities-inclusion", "water-ocean"],
+          skills: ["adaptability", "writing-translation"],
+          geolocationId: "mock-geolocation-id",
+        });
+        assertEquals(response.totalResults, 1);
+        assertEquals(response.data.length, 1);
+
+        const reco = response.data[0];
+        assertEngagementMatchesRow(dbFixtures.row1, reco.engagement);
+
+        assertEquals(reco.matchedTopics, [
+          "disabilities-inclusion", // tenth item (index 9)
+          "water-ocean", // last item  (index 27)
+          "agriculture-food", // first item (index 0)
+        ]);
+        assertEquals(reco.matchedSkills, [
+          "adaptability", // first item (index 0)
+          "writing-translation", // last item  (index 49)
+          "conflict-management", // tenth item (index 9)
+        ]);
+        assertEquals(reco.matchedGeoLocationDistanceInMeters, 0);
+      });
+    });
+    it("resolves latitude/longitude using the GeoAPI client when geolocationId is given", () => {
+      withMockedDependencies()(
+        (volunteeringDB, geoAPIClient) => {
+          volunteeringDB.findRecos({
+            limit: 10,
+            offset: 0,
+            topics: [],
+            skills: [],
+            geolocationId: "mock-geolocation-id",
+          });
+          assertSpyCall(geoAPIClient.resolveCoordinates as Stub, 0, {
+            args: ["mock-geolocation-id"],
+          });
+        },
+      );
+    });
+    it("does not resolve latitude/longitude when geolocationId is not given", () => {
+      withMockedDependencies()(
+        (volunteeringDB, geoAPIClient) => {
+          volunteeringDB.findRecos({
+            limit: 10,
+            offset: 0,
+            topics: ["agriculture-food"],
+            skills: [],
+          });
+          assertSpyCalls(geoAPIClient.resolveCoordinates as Stub, 0);
+        },
+      );
+    });
+    it("falls back to recommend based only on topics and skills if given and geo location resolution fails", () => {
+      withMockedDependencies()(
+        async (volunteeringDB, geoAPIClient) => {
+          stub(
+            geoAPIClient,
+            "resolveCoordinates",
+            returnsNext([Promise.reject("boom!")]),
+          );
+
+          const result = await volunteeringDB.findRecos({
+            limit: 10,
+            offset: 0,
+            topics: ["agriculture-food"],
+            skills: [],
+            geolocationId: "mock-geolocation-id",
+          });
+          assertEquals(result.totalResults, 0);
+          assertEquals(result.data, []);
+        },
+      );
+    });
+    it("fails with error message if no topics and skills are given and geo location resolution fails", () => {
+      withMockedDependencies()(
+        async (volunteeringDB, geoAPIClient) => {
+          stub(
+            geoAPIClient,
+            "resolveCoordinates",
+            returnsNext([Promise.reject("boom!")]),
+          );
+          await assertRejects(
+            () =>
+              volunteeringDB.findRecos({
                 limit: 10,
                 offset: 0,
                 topics: [],

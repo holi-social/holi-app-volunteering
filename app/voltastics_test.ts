@@ -14,7 +14,8 @@ import { processGqlRequest, stubFetch } from "./common_test.ts";
 import {
   CategoriesResponse,
   EngagementParameters,
-  EngagementRecommendationsParameters,
+  EngagementRecosParameters,
+  EngagementRecosResponse,
   EngagementResponse,
   EngagementsResponse,
   FilteredEngagementsParameters,
@@ -30,6 +31,12 @@ import {
 } from "./voltastics_test_data.ts";
 import { fetchCategories, fetchEngagementOpportunities } from "./voltastics.ts";
 import { VolunteeringDB } from "./volunteering_db.ts";
+import { logger, LogSeverity } from "./logging.ts";
+
+logger.setUpLogger(
+  "development",
+  LogSeverity.EMERGENCY,
+);
 
 const emptyResponse = {
   success: true,
@@ -147,7 +154,10 @@ const fakeVolunteeringDB = new (class implements VolunteeringDB {
   public engagementById(_params: EngagementParameters): Promise<EngagementResponse> {
     return Promise.reject(new Error("should not have been called"));
   }
-  findRecommendations(_params: EngagementRecommendationsParameters): Promise<EngagementsResponse> {
+  findRecommendations(_params: EngagementRecosParameters): Promise<EngagementsResponse> {
+    return Promise.reject(new Error("should not have been called"));
+  }
+  findRecos(_params: EngagementRecosParameters): Promise<EngagementRecosResponse> {
     return Promise.reject(new Error("should not have been called"));
   }
   filterEngagements(_params: FilteredEngagementsParameters): Promise<EngagementsResponse> {
