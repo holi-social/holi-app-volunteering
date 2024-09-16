@@ -2,7 +2,8 @@ import {
   CategoriesResponse,
   EngagementOpportunitiesParameters,
   EngagementParameters,
-  EngagementRecommendationsParameters,
+  EngagementRecosParameters,
+  EngagementRecosResponse,
   EngagementResponse,
   EngagementsResponse,
   FilteredEngagementsParameters,
@@ -53,17 +54,17 @@ const typeDefs = `
       """
       If this engagement is part of a recommendation query response, matchedTopics contains the slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
-      matchedTopics: [String]
+      matchedTopics: [String] @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead.")
       
       """
       If this engagement is part of a recommendation query response, matchedSkills contains the slugs of matched skills. The order is defined as follows: 1) skills that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
-      matchedSkills: [String]
+      matchedSkills: [String] @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead.")
       
       """
       If this engagement is part of a recommendation query response, matchedGeoLocationDistanceInMeters contains the distance (in meters) between the engagement and the location given in the query.
       """
-      matchedGeoLocationDistanceInMeters: Float
+      matchedGeoLocationDistanceInMeters: Float @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead.")
     }
 
     type Category {
@@ -79,6 +80,31 @@ const typeDefs = `
       data: [Engagement]!
     }
     
+    type EngagementReco {
+    
+      engagement: Engagement!
+      
+      """
+      Contains the slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
+      """
+      matchedTopics: [String]
+      
+      """
+      Contains the slugs of matched skills. The order is defined as follows: 1) skills that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
+      """
+      matchedSkills: [String]
+      
+      """
+      Contains the distance (in meters) between the engagement and the location given in the query.
+      """
+      matchedGeoLocationDistanceInMeters: Float
+    }
+    
+    type EngagementRecosResponse {
+      totalResults: Int!
+      data: [EngagementReco]!
+    }
+    
     scalar GeoJSON
 
     type Query {
@@ -88,11 +114,17 @@ const typeDefs = `
         """
         Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
         """
-        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
+        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse! @deprecated(reason: "Use the engagementRecos query instead.")
+        
+        """
+        Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
+        """
+        engagementRecos(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementRecosResponse!
         
         engagement(id: String!): Engagement
         
         categories: CategoriesResponse!
+        
         filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
     }
 
@@ -130,9 +162,15 @@ const createResolvers = (
     engagementRecommendations: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-      parameters: EngagementRecommendationsParameters,
+      parameters: EngagementRecosParameters,
     ): Promise<EngagementsResponse> =>
       config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.findRecommendations(parameters),
+    engagementRecos: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: EngagementRecosParameters,
+    ): Promise<EngagementRecosResponse> =>
+      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.findRecos(parameters),
   },
   Mutation: {
     trackEngagementView: (
@@ -222,7 +260,7 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
       debug: {
         queries: false,
         notices: false,
-        results: false,
+        results: true,
         queryInError: true,
       },
     },
