@@ -52,22 +52,19 @@ const typeDefs = `
       skills: [String]
       
       """
-      Deprecated with the introduction of the EngagementReco type / engagementReco query.
       If this engagement is part of a recommendation query response, matchedTopics contains the slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
-      matchedTopics: [String]
+      matchedTopics: [String] @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead.")
       
       """
-      Deprecated with the introduction of the EngagementReco type / engagementReco query.
       If this engagement is part of a recommendation query response, matchedSkills contains the slugs of matched skills. The order is defined as follows: 1) skills that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
-      matchedSkills: [String]
+      matchedSkills: [String] @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead.")
       
       """
-      Deprecated with the introduction of the EngagementReco type / engagementReco query.
       If this engagement is part of a recommendation query response, matchedGeoLocationDistanceInMeters contains the distance (in meters) between the engagement and the location given in the query.
       """
-      matchedGeoLocationDistanceInMeters: Float
+      matchedGeoLocationDistanceInMeters: Float @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead.")
     }
 
     type Category {
@@ -117,7 +114,7 @@ const typeDefs = `
         """
         Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
         """
-        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
+        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse! @deprecated(reason: "Use the engagementRecos query instead.")
         
         """
         Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
