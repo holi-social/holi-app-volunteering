@@ -39,6 +39,19 @@ export type EngagementsResponse = {
   data: Engagement[];
 };
 
+export type EngagementReco = {
+  engagement: Engagement;
+
+  matchedTopics?: string[];
+  matchedSkills?: string[];
+  matchedGeoLocationDistanceInMeters?: number;
+};
+
+export type EngagementRecosResponse = {
+  totalResults: number;
+  data: EngagementReco[];
+};
+
 export type EngagementOpportunitiesParameters = {
   limit: number;
   offset: number;
@@ -60,7 +73,7 @@ export type TrackEngagementViewResponse = {
   id: string;
 };
 
-export type EngagementRecommendationsParameters = {
+export type EngagementRecosParameters = {
   limit: number;
   offset: number;
   skills: string[];

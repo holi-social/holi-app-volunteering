@@ -4,7 +4,9 @@ import { GeoAPIClient } from "./geo_api_client.ts";
 import {
   Engagement,
   EngagementParameters,
-  EngagementRecommendationsParameters,
+  EngagementReco,
+  EngagementRecosParameters,
+  EngagementRecosResponse,
   EngagementResponse,
   EngagementsResponse,
   FilteredEngagementsParameters,
@@ -238,21 +240,40 @@ export const exportedForTesting = {
   SKILLS_VECTOR_INDICES,
 };
 
-const toEngagement = (
+const addQueryMatchInfo = (
+  row: VolunteeringDBRow,
+  engagement: Engagement,
+  queriedTopics: string[],
+  queriedSkills: string[],
+) => {
+  const embedding = JSON.parse(row.embedding_array) as number[];
+  const { topics, skills } = decodeMatchesFromEmbedding(embedding, queriedTopics, queriedSkills);
+  return {
+    ...engagement,
+    matchedTopics: topics,
+    matchedSkills: skills,
+    matchedGeoLocationDistanceInMeters: row.distance_in_meters,
+  };
+};
+
+const toEngagementRecommendation = (
   imageProxyBaseUrl: string,
   row: VolunteeringDBRow,
-  options: {
-    addQueryMatchInfo: false;
-  } | {
-    addQueryMatchInfo: true;
-    queriedTopics: string[];
-    queriedSkills: string[];
-  },
-): Engagement => {
+  queriedTopics: string[],
+  queriedSkills: string[],
+): EngagementReco => {
   const embedding = JSON.parse(row.embedding_array) as number[];
-  const { topics: matchedTopics, skills: matchedSkills } = options.addQueryMatchInfo
-    ? decodeMatchesFromEmbedding(embedding, options.queriedTopics, options.queriedSkills)
-    : { topics: undefined, skills: undefined };
+  const { topics, skills } = decodeMatchesFromEmbedding(embedding, queriedTopics, queriedSkills);
+  return {
+    engagement: toEngagement(imageProxyBaseUrl, row),
+    matchedTopics: topics,
+    matchedSkills: skills,
+    matchedGeoLocationDistanceInMeters: row.distance_in_meters,
+  };
+};
+
+const toEngagement = (imageProxyBaseUrl: string, row: VolunteeringDBRow): Engagement => {
+  const embedding = JSON.parse(row.embedding_array) as number[];
   const { topics, skills } = decodeMatchesFromEmbedding(embedding, [], []);
   return {
     id: "" + row.id,
@@ -279,9 +300,6 @@ const toEngagement = (
     longitude: row.longitude,
     topics: topics,
     skills: skills,
-    matchedTopics,
-    matchedSkills,
-    matchedGeoLocationDistanceInMeters: row.distance_in_meters,
   };
 };
 
@@ -295,7 +313,8 @@ const ERROR_CODE_NOT_FOUND = "NOT_FOUND";
 
 export interface VolunteeringDB {
   engagementById(params: EngagementParameters): Promise<EngagementResponse>;
-  findRecommendations(params: EngagementRecommendationsParameters): Promise<EngagementsResponse>;
+  findRecommendations(params: EngagementRecosParameters): Promise<EngagementsResponse>;
+  findRecos(params: EngagementRecosParameters): Promise<EngagementRecosResponse>;
   filterEngagements(params: FilteredEngagementsParameters): Promise<EngagementsResponse>;
 }
 
@@ -329,12 +348,12 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
       );
     } else {
       const row = result.rows[0];
-      return toEngagement(this.imageProxyBaseUrl, row, { addQueryMatchInfo: false });
+      return toEngagement(this.imageProxyBaseUrl, row);
     }
   }
 
   async findRecommendations(
-    { offset, limit, topics, skills, geolocationId }: EngagementRecommendationsParameters,
+    { offset, limit, topics, skills, geolocationId }: EngagementRecosParameters,
   ): Promise<EngagementsResponse> {
     const result = await this.queryRecos(
       offset < 0 ? 0 : offset,
@@ -347,12 +366,28 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
       throw reason;
     });
     const recos = result.rows.map((row) =>
-      toEngagement(this.imageProxyBaseUrl, row, {
-        addQueryMatchInfo: true,
-        queriedTopics: topics,
-        queriedSkills: skills,
-      })
+      addQueryMatchInfo(row, toEngagement(this.imageProxyBaseUrl, row), topics, skills)
     );
+    return Promise.resolve({
+      totalResults: extractTotalResultCount(result),
+      data: recos,
+    });
+  }
+
+  async findRecos(
+    { offset, limit, topics, skills, geolocationId }: EngagementRecosParameters,
+  ): Promise<EngagementRecosResponse> {
+    const result = await this.queryRecos(
+      offset < 0 ? 0 : offset,
+      limit > MAX_LIMIT || limit < 1 ? DEFAULT_LIMIT : limit,
+      topics,
+      skills,
+      geolocationId,
+    ).catch((reason) => {
+      logger.error("Error retrieving recommendations. Reason: ", reason);
+      throw reason;
+    });
+    const recos = result.rows.map((row) => toEngagementRecommendation(this.imageProxyBaseUrl, row, topics, skills));
     return Promise.resolve({
       totalResults: extractTotalResultCount(result),
       data: recos,
@@ -606,7 +641,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
 
     return {
       totalResults,
-      data: result.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row, { addQueryMatchInfo: false })),
+      data: result.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row)),
     };
   }
 }
