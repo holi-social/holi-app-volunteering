@@ -305,14 +305,14 @@ describe("VolunteeringDB", () => {
   describe("querying engagement by id", () => {
     it("correctly parses engagement", () => {
       withMockedDependencies([dbFixtures.row1])(async (volunteeringDB) => {
-        const response = await volunteeringDB.engagementById({ id: "1" });
+        const response = await volunteeringDB.engagement({ id: "1" });
         assertEngagementMatchesRow(dbFixtures.row1, response!);
       });
     });
 
     it("throws NOT_FOUND error for empty result", () => {
       withMockedDependencies([])(async (volunteeringDB) => {
-        const query = () => volunteeringDB.engagementById({ id: "1" });
+        const query = () => volunteeringDB.engagement({ id: "1" });
         await assertRejects(query, GraphQLError, "Not found");
       });
     });
@@ -322,7 +322,7 @@ describe("VolunteeringDB", () => {
     it("resolves latitude/longitude using the GeoAPI client when geolocationId is given", () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.findRecommendations({
+          volunteeringDB.engagementRecommendations({
             limit: 10,
             offset: 0,
             topics: [],
@@ -338,7 +338,7 @@ describe("VolunteeringDB", () => {
     it("does not resolve latitude/longitude when geolocationId is not given", () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.findRecommendations({
+          volunteeringDB.engagementRecommendations({
             limit: 10,
             offset: 0,
             topics: ["agriculture-food"],
@@ -357,7 +357,7 @@ describe("VolunteeringDB", () => {
             returnsNext([Promise.reject("boom!")]),
           );
 
-          const result = await volunteeringDB.findRecommendations({
+          const result = await volunteeringDB.engagementRecommendations({
             limit: 10,
             offset: 0,
             topics: ["agriculture-food"],
@@ -379,7 +379,7 @@ describe("VolunteeringDB", () => {
           );
           await assertRejects(
             () =>
-              volunteeringDB.findRecommendations({
+              volunteeringDB.engagementRecommendations({
                 limit: 10,
                 offset: 0,
                 topics: [],
@@ -396,7 +396,7 @@ describe("VolunteeringDB", () => {
   describe("findRecos", () => {
     it("wraps search results with matchedTopics, matchedSkills and matchedGeoLocationDistanceInMeters", () => {
       withMockedDependencies([dbFixtures.row1])(async (volunteeringDB, _geoApiClient) => {
-        const response = await volunteeringDB.findRecos({
+        const response = await volunteeringDB.engagementRecos({
           limit: 10,
           offset: 0,
           topics: ["disabilities-inclusion", "water-ocean"],
@@ -425,7 +425,7 @@ describe("VolunteeringDB", () => {
     it("resolves latitude/longitude using the GeoAPI client when geolocationId is given", () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.findRecos({
+          volunteeringDB.engagementRecos({
             limit: 10,
             offset: 0,
             topics: [],
@@ -441,7 +441,7 @@ describe("VolunteeringDB", () => {
     it("does not resolve latitude/longitude when geolocationId is not given", () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.findRecos({
+          volunteeringDB.engagementRecos({
             limit: 10,
             offset: 0,
             topics: ["agriculture-food"],
@@ -460,7 +460,7 @@ describe("VolunteeringDB", () => {
             returnsNext([Promise.reject("boom!")]),
           );
 
-          const result = await volunteeringDB.findRecos({
+          const result = await volunteeringDB.engagementRecos({
             limit: 10,
             offset: 0,
             topics: ["agriculture-food"],
@@ -482,7 +482,7 @@ describe("VolunteeringDB", () => {
           );
           await assertRejects(
             () =>
-              volunteeringDB.findRecos({
+              volunteeringDB.engagementRecos({
                 limit: 10,
                 offset: 0,
                 topics: [],
@@ -501,7 +501,7 @@ describe("VolunteeringDB", () => {
     it("resolves geolocation geometry using the GeoAPI client when geolocationId is given", () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.filterEngagements({
+          volunteeringDB.filteredEngagements({
             limit: 10,
             offset: 0,
             topics: [],
@@ -509,7 +509,7 @@ describe("VolunteeringDB", () => {
             geolocationId: "mock-geolocation-id",
           });
           assertSpyCall(geoAPIClient.resolveGeometry as Stub, 0, {
-            args: ["mock-geolocation-id"],
+            args: ["mock-geolocation-id", false],
           });
         },
       );
@@ -517,7 +517,7 @@ describe("VolunteeringDB", () => {
     it("does not resolve geolocation geometry when geolocationId is not given", () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.filterEngagements({
+          volunteeringDB.filteredEngagements({
             limit: 10,
             offset: 0,
             topics: ["agriculture-food"],
@@ -537,7 +537,7 @@ describe("VolunteeringDB", () => {
           );
           await assertRejects(
             () =>
-              volunteeringDB.filterEngagements({
+              volunteeringDB.filteredEngagements({
                 limit: 10,
                 offset: 0,
                 topics: ["agriculture-food"],
@@ -555,7 +555,7 @@ describe("VolunteeringDB", () => {
         async (volunteeringDB, _geoAPIClient) => {
           await assertRejects(
             () =>
-              volunteeringDB.filterEngagements({
+              volunteeringDB.filteredEngagements({
                 limit: 10,
                 offset: 0,
                 topics: [],

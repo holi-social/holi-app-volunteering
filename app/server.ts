@@ -10,12 +10,11 @@ import {
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
-import { createSchema, createYoga, deadline, DeadlineError, useResponseCache } from "./deps.ts";
+import { Client, createSchema, createYoga, deadline, DeadlineError, Sentry, useResponseCache } from "./deps.ts";
 import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
 import { logger } from "./logging.ts";
 import { PostgresVolunteeringDB, VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
-import { GeoAPIClient } from "./geo_api_client.ts";
-import { Client } from "https://deno.land/x/postgres@v0.19.3/client.ts";
+import { GeoAPIClientImpl } from "./geo_api_client.ts";
 
 const typeDefs = `
     type Organizer {
@@ -144,33 +143,40 @@ const createResolvers = (
       parameters: EngagementOpportunitiesParameters,
     ): Promise<EngagementsResponse> =>
       config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : fetchEngagementOpportunities(config)(parameters),
-    engagement: (
-      // deno-lint-ignore no-explicit-any
-      _parent: any,
-      parameters: EngagementParameters,
-    ): Promise<EngagementResponse> => config.fake ? Promise.resolve(null) : volunteeringDB.engagementById(parameters),
     categories: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
     ): Promise<CategoriesResponse> => config.fake ? Promise.resolve({ data: [] }) : fetchCategories(config.voltastics),
+    engagement: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: EngagementParameters,
+    ): Promise<EngagementResponse> =>
+      config.fake ? Promise.resolve(null) : Sentry.startNewTrace(() => volunteeringDB.engagement(parameters)),
     filteredEngagements: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: FilteredEngagementsParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.filterEngagements(parameters),
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : Sentry.startNewTrace(() => volunteeringDB.filteredEngagements(parameters)),
     engagementRecommendations: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementRecosParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.findRecommendations(parameters),
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : Sentry.startNewTrace(() => volunteeringDB.engagementRecommendations(parameters)),
     engagementRecos: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementRecosParameters,
     ): Promise<EngagementRecosResponse> =>
-      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.findRecos(parameters),
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : Sentry.startNewTrace(() => volunteeringDB.engagementRecos(parameters)),
   },
   Mutation: {
     trackEngagementView: (
@@ -193,6 +199,7 @@ export interface VoltasticsConfig {
   baseUrl: string;
   apiToken: string;
 }
+
 export interface ServerConfig {
   port: number; // default: 8004
   cacheEnabled: boolean; // default: true
@@ -268,7 +275,7 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
       attempts: config.volunteeringDB.connectionAttempts,
     },
   });
-  const geoAPIClient = new GeoAPIClient(config.geoAPIEndpointUrl);
+  const geoAPIClient = new GeoAPIClientImpl(config.geoAPIEndpointUrl);
   const volunteeringDB = new PostgresVolunteeringDB(
     client,
     config.imageProxyBaseUrl,
