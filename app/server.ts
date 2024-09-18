@@ -264,7 +264,6 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
     hostname: "0.0.0.0",
     handler: (req: Request) => {
       const url = new URL(req.url);
-      console.debug(url.pathname);
       if (url.pathname.startsWith("/liveness")) return isDbConnectionAlive(client);
       else return graphQLServer.handleRequest(req);
     },
