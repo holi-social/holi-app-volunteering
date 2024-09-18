@@ -10,12 +10,12 @@ import {
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
-import { createSchema, createYoga, deadline, DeadlineError, useResponseCache } from "./deps.ts";
+import { Client, createSchema, createYoga, deadline, DeadlineError, Sentry, useResponseCache } from "./deps.ts";
 import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
 import { logger } from "./logging.ts";
-import { PostgresVolunteeringDB, VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
-import { GeoAPIClient } from "./geo_api_client.ts";
-import { Client } from "https://deno.land/x/postgres@v0.19.3/client.ts";
+import { PostgresVolunteeringDB, VolunteeringDB } from "./volunteering_db.ts";
+import { GeoAPIClientImpl } from "./geo_api_client.ts";
+import { ServerConfig } from "./config.ts";
 
 const typeDefs = `
     type Organizer {
@@ -144,33 +144,40 @@ const createResolvers = (
       parameters: EngagementOpportunitiesParameters,
     ): Promise<EngagementsResponse> =>
       config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : fetchEngagementOpportunities(config)(parameters),
-    engagement: (
-      // deno-lint-ignore no-explicit-any
-      _parent: any,
-      parameters: EngagementParameters,
-    ): Promise<EngagementResponse> => config.fake ? Promise.resolve(null) : volunteeringDB.engagementById(parameters),
     categories: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
     ): Promise<CategoriesResponse> => config.fake ? Promise.resolve({ data: [] }) : fetchCategories(config.voltastics),
+    engagement: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: EngagementParameters,
+    ): Promise<EngagementResponse> =>
+      config.fake ? Promise.resolve(null) : Sentry.startNewTrace(() => volunteeringDB.engagement(parameters)),
     filteredEngagements: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: FilteredEngagementsParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.filterEngagements(parameters),
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : Sentry.startNewTrace(() => volunteeringDB.filteredEngagements(parameters)),
     engagementRecommendations: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementRecosParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.findRecommendations(parameters),
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : Sentry.startNewTrace(() => volunteeringDB.engagementRecommendations(parameters)),
     engagementRecos: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
       parameters: EngagementRecosParameters,
     ): Promise<EngagementRecosResponse> =>
-      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.findRecos(parameters),
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : Sentry.startNewTrace(() => volunteeringDB.engagementRecos(parameters)),
   },
   Mutation: {
     trackEngagementView: (
@@ -181,29 +188,6 @@ const createResolvers = (
       config.fake ? Promise.resolve({ id: parameters.id }) : trackEngagementView(config.voltastics)(parameters),
   },
 });
-
-export const DEFAULT_PORT = 8004;
-export const DEFAULT_CACHE_ENABLED = true;
-export const DEFAULT_CACHE_TTL_MS_VOLTASTICS = 86_400_000; // 24 hours
-export const DEFAULT_CACHE_TTL_MS_DB = 3_600_000; // 1 hour
-
-export const DEFAULT_DB_CONNECTION_ATTEMPTS = 10;
-
-export interface VoltasticsConfig {
-  baseUrl: string;
-  apiToken: string;
-}
-export interface ServerConfig {
-  port: number; // default: 8004
-  cacheEnabled: boolean; // default: true
-  cacheTtlMsVoltastics: number; // default: 24 hours
-  cacheTtlMsDB: number; // default: 1 hour
-  voltastics: VoltasticsConfig;
-  imageProxyBaseUrl: string;
-  fake: boolean; // For local development. If set, the API returns dummy data
-  volunteeringDB: VolunteeringDBConfig;
-  geoAPIEndpointUrl: string;
-}
 
 export const createGraphQLServer = (config: ServerConfig, volunteeringDB: VolunteeringDB): GraphQLServer => {
   const plugins = config.cacheEnabled
@@ -260,7 +244,7 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
       debug: {
         queries: false,
         notices: false,
-        results: true,
+        results: false,
         queryInError: true,
       },
     },
@@ -268,7 +252,7 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
       attempts: config.volunteeringDB.connectionAttempts,
     },
   });
-  const geoAPIClient = new GeoAPIClient(config.geoAPIEndpointUrl);
+  const geoAPIClient = new GeoAPIClientImpl(config.geoAPIEndpointUrl);
   const volunteeringDB = new PostgresVolunteeringDB(
     client,
     config.imageProxyBaseUrl,
@@ -280,7 +264,6 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
     hostname: "0.0.0.0",
     handler: (req: Request) => {
       const url = new URL(req.url);
-      console.debug(url.pathname);
       if (url.pathname.startsWith("/liveness")) return isDbConnectionAlive(client);
       else return graphQLServer.handleRequest(req);
     },

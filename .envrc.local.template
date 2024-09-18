@@ -1,3 +1,4 @@
+export SENTRY_DSN=
 export CACHE_ENABLED=false
 
 export VOLUNTEERING_VOLTASTICS_API_URL=

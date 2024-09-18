@@ -66,6 +66,10 @@ resource "google_cloud_run_service" "volunteering_api" {
           value = local.environment
         }
         env {
+          name  = "SENTRY_DSN"
+          value = "https://030790361bc255b6e93a562c1a6ddba8@o949544.ingest.us.sentry.io/4507966078713856"
+        }
+        env {
           name  = "CACHE_ENABLED"
           value = "true"
         }

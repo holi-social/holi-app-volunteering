@@ -118,7 +118,7 @@
         "dependencies": {
           "@graphql-typed-document-node/core": "@graphql-typed-document-node/core@3.2.0_graphql@16.8.1",
           "cross-inspect": "cross-inspect@1.0.1",
-          "dset": "dset@3.1.3",
+          "dset": "dset@3.1.4",
           "graphql": "graphql@16.8.1",
           "tslib": "tslib@2.7.0"
         }
@@ -320,8 +320,8 @@
           "tslib": "tslib@2.7.0"
         }
       },
-      "dset@3.1.3": {
-        "integrity": "sha512-20TuZZHCEZ2O71q9/+8BwKwZ0QtD9D8ObhrihJPr+vLLYlSuAU3/zL4cSlgbfeoGHTjCSJBa7NGcrF9/Bx/WJQ==",
+      "dset@3.1.4": {
+        "integrity": "sha512-2QF/g9/zTaPDc3BjNcVTGoBbXBgYfMTTceLaYcFJ/W9kggFUkhxD/hMEeuLKbugyef9SqAx8cpgwlIP/jinUTA==",
         "dependencies": {}
       },
       "fast-decode-uri-component@1.0.1": {
@@ -356,7 +356,7 @@
           "@graphql-yoga/subscription": "@graphql-yoga/subscription@3.1.0",
           "@whatwg-node/fetch": "@whatwg-node/fetch@0.8.8",
           "@whatwg-node/server": "@whatwg-node/server@0.7.7",
-          "dset": "dset@3.1.3",
+          "dset": "dset@3.1.4",
           "graphql": "graphql@16.8.1",
           "lru-cache": "lru-cache@7.18.3",
           "tslib": "tslib@2.7.0"
@@ -373,7 +373,7 @@
           "@graphql-yoga/subscription": "@graphql-yoga/subscription@5.0.1",
           "@whatwg-node/fetch": "@whatwg-node/fetch@0.9.21",
           "@whatwg-node/server": "@whatwg-node/server@0.9.49",
-          "dset": "dset@3.1.3",
+          "dset": "dset@3.1.4",
           "graphql": "graphql@16.8.1",
           "lru-cache": "lru-cache@10.4.3",
           "tslib": "tslib@2.7.0"
@@ -457,7 +457,8 @@
   },
   "redirects": {
     "https://deno.land/std/async/mod.ts": "https://deno.land/std@0.224.0/async/mod.ts",
-    "https://deno.land/x/postgres/mod.ts": "https://deno.land/x/postgres@v0.19.3/mod.ts"
+    "https://deno.land/x/postgres/mod.ts": "https://deno.land/x/postgres@v0.19.3/mod.ts",
+    "https://deno.land/x/sentry/index.mjs": "https://deno.land/x/sentry@8.30.0/index.mjs"
   },
   "remote": {
     "https://deno.land/std@0.155.0/fmt/colors.ts": "ff7dc9c9f33a72bd48bc24b21bbc1b4545d8494a431f17894dbc5fe92a938fc4",
@@ -467,17 +468,6 @@
     "https://deno.land/std@0.155.0/testing/asserts.ts": "ac295f7fd22a7af107580e2475402a8c386cb1bf18bf837ae266ac0665786026",
     "https://deno.land/std@0.155.0/testing/bdd.ts": "35060cefd9cc21b414f4d89453b3551a3d52ec50aeff25db432503c5485b2f72",
     "https://deno.land/std@0.155.0/testing/mock.ts": "d7ad40139cda87476c4dc1efeffe406bbfb4a5f82b688e0b85bffe9e911526a2",
-    "https://deno.land/std@0.156.0/async/abortable.ts": "87aa7230be8360c24ad437212311c9e8d4328854baec27b4c7abb26e85515c06",
-    "https://deno.land/std@0.156.0/async/deadline.ts": "48ac998d7564969f3e6ec6b6f9bf0217ebd00239b1b2292feba61272d5dd58d0",
-    "https://deno.land/std@0.156.0/async/debounce.ts": "de5433bff08a2bb61416fc53b3bd2d5867090c8a815465e5b4a10a77495b1051",
-    "https://deno.land/std@0.156.0/async/deferred.ts": "c01de44b9192359cebd3fe93273fcebf9e95110bf3360023917da9a2d1489fae",
-    "https://deno.land/std@0.156.0/async/delay.ts": "0419dfc993752849692d1f9647edf13407c7facc3509b099381be99ffbc9d699",
-    "https://deno.land/std@0.156.0/async/mod.ts": "dd0a8ed4f3984ffabe2fcca7c9f466b7932d57b1864ffee148a5d5388316db6b",
-    "https://deno.land/std@0.156.0/async/mux_async_iterator.ts": "3447b28a2a582224a3d4d3596bccbba6e85040da3b97ed64012f7decce98d093",
-    "https://deno.land/std@0.156.0/async/pool.ts": "ef9eb97b388543acbf0ac32647121e4dbe629236899586c4d4311a8770fbb239",
-    "https://deno.land/std@0.156.0/async/tee.ts": "d27680d911816fcb3d231e16d690e7588079e66a9b2e5ce8cc354db94fdce95f",
-    "https://deno.land/std@0.156.0/http/server.ts": "c1bce1cbf4060055f622d5c3f0e406fd553e5dca111ca836d28c6268f170ebeb",
-    "https://deno.land/std@0.170.0/encoding/base64.ts": "8605e018e49211efc767686f6f687827d7f5fd5217163e981d8d693105640d7a",
     "https://deno.land/std@0.214.0/assert/assert.ts": "bec068b2fccdd434c138a555b19a2c2393b71dfaada02b7d568a01541e67cdc5",
     "https://deno.land/std@0.214.0/assert/assertion_error.ts": "9f689a101ee586c4ce92f52fa7ddd362e86434ffdf1f848e45987dc7689976b8",
     "https://deno.land/std@0.214.0/async/delay.ts": "8e1d18fe8b28ff95885e2bc54eccec1713f57f756053576d8228e6ca110793ad",
@@ -590,8 +580,6 @@
     "https://deno.land/std@0.224.0/async/pool.ts": "2b972e3643444b73f6a8bcdd19799a2d0821b28a45fbe47fd333223eb84327f0",
     "https://deno.land/std@0.224.0/async/retry.ts": "29025b09259c22123c599b8c957aeff2755854272954776dc9a5846c72ea4cfe",
     "https://deno.land/std@0.224.0/async/tee.ts": "34373c58950b7ac5950632dc8c9908076abeefcc9032d6299fff92194c284fbd",
-    "https://deno.land/x/cliffy@v0.25.7/ansi/ansi_escapes.ts": "885f61f343223f27b8ec69cc138a54bea30542924eacd0f290cd84edcf691387",
-    "https://deno.land/x/cliffy@v0.25.7/ansi/deps.ts": "0f35cb7e91868ce81561f6a77426ea8bc55dc15e13f84c7352f211023af79053",
     "https://deno.land/x/postgres@v0.19.3/client.ts": "d141c65c20484c545a1119c9af7a52dcc24f75c1a5633de2b9617b0f4b2ed5c1",
     "https://deno.land/x/postgres@v0.19.3/client/error.ts": "05b0e35d65caf0ba21f7f6fab28c0811da83cd8b4897995a2f411c2c83391036",
     "https://deno.land/x/postgres@v0.19.3/connection/auth.ts": "db15c1659742ef4d2791b32834950278dc7a40cb931f8e434e6569298e58df51",
@@ -615,6 +603,7 @@
     "https://deno.land/x/postgres@v0.19.3/query/types.ts": "540f6f973d493d63f2c0059a09f3368071f57931bba68bea408a635a3e0565d6",
     "https://deno.land/x/postgres@v0.19.3/utils/deferred.ts": "5420531adb6c3ea29ca8aac57b9b59bd3e4b9a938a4996bbd0947a858f611080",
     "https://deno.land/x/postgres@v0.19.3/utils/utils.ts": "ca47193ea03ff5b585e487a06f106d367e509263a960b787197ce0c03113a738",
+    "https://deno.land/x/sentry@8.30.0/index.mjs": "b043c7d7ad8a67d7c554f46743e9c8d44c673aabe1e28e51c96187b02c30e4ab",
     "https://esm.sh/@turf/turf@6.5.0": "1b89eb65070928dd870eb2317386f35192ccc1145242946ba7725432eb5fe547",
     "https://esm.sh/v135/@turf/along@6.5.0/denonext/along.mjs": "c0b37a23533598d200708d3f036820ac40979b430b5f0bc28611a7348e2a7c94",
     "https://esm.sh/v135/@turf/angle@6.5.0/denonext/angle.mjs": "347a7b8ad0bd322092d0625bc59e19df1fa066f78f51182c22d070eb705a0e20",
