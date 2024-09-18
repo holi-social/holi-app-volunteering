@@ -20,7 +20,7 @@ import {
   EngagementsResponse,
   FilteredEngagementsParameters,
 } from "./types.ts";
-import { createGraphQLServer, GraphQLServer, ServerConfig, VoltasticsConfig } from "./server.ts";
+import { createGraphQLServer, GraphQLServer } from "./server.ts";
 
 import {
   apiCategoriesResponse,
@@ -32,6 +32,7 @@ import {
 import { fetchCategories, fetchEngagementOpportunities } from "./voltastics.ts";
 import { VolunteeringDB } from "./volunteering_db.ts";
 import { logger, LogSeverity } from "./logging.ts";
+import { ServerConfig, VoltasticsConfig } from "./config.ts";
 
 logger.setUpLogger(
   "development",
@@ -151,16 +152,16 @@ const noCacheServerConfig = {
 };
 
 const fakeVolunteeringDB = new (class implements VolunteeringDB {
-  public engagementById(_params: EngagementParameters): Promise<EngagementResponse> {
+  public engagement(_params: EngagementParameters): Promise<EngagementResponse> {
     return Promise.reject(new Error("should not have been called"));
   }
-  findRecommendations(_params: EngagementRecosParameters): Promise<EngagementsResponse> {
+  engagementRecommendations(_params: EngagementRecosParameters): Promise<EngagementsResponse> {
     return Promise.reject(new Error("should not have been called"));
   }
-  findRecos(_params: EngagementRecosParameters): Promise<EngagementRecosResponse> {
+  engagementRecos(_params: EngagementRecosParameters): Promise<EngagementRecosResponse> {
     return Promise.reject(new Error("should not have been called"));
   }
-  filterEngagements(_params: FilteredEngagementsParameters): Promise<EngagementsResponse> {
+  filteredEngagements(_params: FilteredEngagementsParameters): Promise<EngagementsResponse> {
     return Promise.reject(new Error("should not have been called"));
   }
 })();

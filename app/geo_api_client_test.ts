@@ -1,7 +1,7 @@
 import { stubFetch, stubFetchWithResponses } from "./common_test.ts";
 import { assertRejects, restore } from "./dev_deps.ts";
 import { assertEquals, beforeEach, describe, it } from "./dev_deps.ts";
-import { GeoAPIClient } from "./geo_api_client.ts";
+import { GeoAPIClientImpl } from "./geo_api_client.ts";
 import { logger, LogSeverity } from "./logging.ts";
 
 logger.setUpLogger(
@@ -59,11 +59,11 @@ const autocompleteResponse = {
 const invalidResponse = {};
 
 describe("GeoAPIClient", () => {
-  let client: GeoAPIClient;
+  let client: GeoAPIClientImpl;
 
   beforeEach(() => {
     restore();
-    client = new GeoAPIClient(testEndpointUrl);
+    client = new GeoAPIClientImpl(testEndpointUrl);
   });
 
   describe("resolveGeometry", () => {

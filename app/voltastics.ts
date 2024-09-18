@@ -6,7 +6,6 @@ import {
   ApiSearchEngagementsResponse,
 } from "./api_types.ts";
 import { logger } from "./logging.ts";
-import { ServerConfig, VoltasticsConfig } from "./server.ts";
 import {
   CategoriesResponse,
   Category,
@@ -18,6 +17,7 @@ import {
   TrackEngagementViewResponse,
 } from "./types.ts";
 import { calculateRadius } from "./utils.ts";
+import { ServerConfig, VoltasticsConfig } from "./config.ts";
 
 const transformOrganizer = (
   engagement: ApiSearchEngagement,
