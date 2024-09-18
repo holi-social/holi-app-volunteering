@@ -1,11 +1,21 @@
-import {
-  DEFAULT_CACHE_ENABLED,
-  DEFAULT_CACHE_TTL_MS_DB,
-  DEFAULT_CACHE_TTL_MS_VOLTASTICS,
-  DEFAULT_DB_CONNECTION_ATTEMPTS,
-  DEFAULT_PORT,
-  ServerConfig,
-} from "./server.ts";
+import { VolunteeringDBConfig } from "./volunteering_db.ts";
+
+export interface VoltasticsConfig {
+  baseUrl: string;
+  apiToken: string;
+}
+
+export interface ServerConfig {
+  port: number; // default: 8004
+  cacheEnabled: boolean; // default: true
+  cacheTtlMsVoltastics: number; // default: 24 hours
+  cacheTtlMsDB: number; // default: 1 hour
+  voltastics: VoltasticsConfig;
+  imageProxyBaseUrl: string;
+  fake: boolean; // For local development. If set, the API returns dummy data
+  volunteeringDB: VolunteeringDBConfig;
+  geoAPIEndpointUrl: string;
+}
 
 export const requiredEnv = <T>(
   name: string,
@@ -25,6 +35,13 @@ const asBoolean = (str: string) => /^true$/i.test(str);
 const fake = requiredEnv("FAKE", asBoolean, false); // For local development. If set, the API returns dummy data
 
 export const environment = Deno.env.get("ENVIRONMENT")?.toLowerCase().trim() || "development";
+
+const DEFAULT_PORT = 8004;
+const DEFAULT_CACHE_ENABLED = true;
+const DEFAULT_CACHE_TTL_MS_VOLTASTICS = 86_400_000; // 24 hours
+const DEFAULT_CACHE_TTL_MS_DB = 3_600_000; // 1 hour
+
+const DEFAULT_DB_CONNECTION_ATTEMPTS = 10;
 
 export const serverConfigFromEnv = (): ServerConfig => {
   return {

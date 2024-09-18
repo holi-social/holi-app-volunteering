@@ -13,8 +13,9 @@ import {
 import { Client, createSchema, createYoga, deadline, DeadlineError, Sentry, useResponseCache } from "./deps.ts";
 import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
 import { logger } from "./logging.ts";
-import { PostgresVolunteeringDB, VolunteeringDB, VolunteeringDBConfig } from "./volunteering_db.ts";
+import { PostgresVolunteeringDB, VolunteeringDB } from "./volunteering_db.ts";
 import { GeoAPIClientImpl } from "./geo_api_client.ts";
+import { ServerConfig } from "./config.ts";
 
 const typeDefs = `
     type Organizer {
@@ -187,30 +188,6 @@ const createResolvers = (
       config.fake ? Promise.resolve({ id: parameters.id }) : trackEngagementView(config.voltastics)(parameters),
   },
 });
-
-export const DEFAULT_PORT = 8004;
-export const DEFAULT_CACHE_ENABLED = true;
-export const DEFAULT_CACHE_TTL_MS_VOLTASTICS = 86_400_000; // 24 hours
-export const DEFAULT_CACHE_TTL_MS_DB = 3_600_000; // 1 hour
-
-export const DEFAULT_DB_CONNECTION_ATTEMPTS = 10;
-
-export interface VoltasticsConfig {
-  baseUrl: string;
-  apiToken: string;
-}
-
-export interface ServerConfig {
-  port: number; // default: 8004
-  cacheEnabled: boolean; // default: true
-  cacheTtlMsVoltastics: number; // default: 24 hours
-  cacheTtlMsDB: number; // default: 1 hour
-  voltastics: VoltasticsConfig;
-  imageProxyBaseUrl: string;
-  fake: boolean; // For local development. If set, the API returns dummy data
-  volunteeringDB: VolunteeringDBConfig;
-  geoAPIEndpointUrl: string;
-}
 
 export const createGraphQLServer = (config: ServerConfig, volunteeringDB: VolunteeringDB): GraphQLServer => {
   const plugins = config.cacheEnabled

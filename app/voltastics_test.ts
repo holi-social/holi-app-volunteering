@@ -20,7 +20,7 @@ import {
   EngagementsResponse,
   FilteredEngagementsParameters,
 } from "./types.ts";
-import { createGraphQLServer, GraphQLServer, ServerConfig, VoltasticsConfig } from "./server.ts";
+import { createGraphQLServer, GraphQLServer } from "./server.ts";
 
 import {
   apiCategoriesResponse,
@@ -32,6 +32,7 @@ import {
 import { fetchCategories, fetchEngagementOpportunities } from "./voltastics.ts";
 import { VolunteeringDB } from "./volunteering_db.ts";
 import { logger, LogSeverity } from "./logging.ts";
+import { ServerConfig, VoltasticsConfig } from "./config.ts";
 
 logger.setUpLogger(
   "development",
