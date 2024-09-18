@@ -244,7 +244,7 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
       debug: {
         queries: false,
         notices: false,
-        results: true,
+        results: false,
         queryInError: true,
       },
     },
