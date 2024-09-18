@@ -559,7 +559,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     { offset, limit, topics, skills, geolocationId }: FilteredEngagementsParameters,
   ): Promise<EngagementsResponse> {
     const geometry: GeolocationGeometry | undefined = geolocationId
-      ? await this.geoAPIClient.resolveGeometry(geolocationId, false).catch(
+      ? await this.geoAPIClient.resolveGeometry(geolocationId).catch(
         (error) => {
           logger.warn(error);
           throw new Error(

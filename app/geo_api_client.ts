@@ -25,7 +25,7 @@ type GeoAPIAutocompleteResponse = {
 
 export interface GeoAPIClient {
   resolveCoordinates(geolocationId: string): Promise<GeolocationCoordinates>;
-  resolveGeometry(geolocationId: string, allowPoints: boolean): Promise<GeolocationGeometry>;
+  resolveGeometry(geolocationId: string, options?: { allowPoints?: boolean }): Promise<GeolocationGeometry>;
 }
 
 export class GeoAPIClientImpl implements GeoAPIClient {
@@ -87,7 +87,7 @@ export class GeoAPIClientImpl implements GeoAPIClient {
 
   async resolveGeometry(
     geolocationId: string,
-    allowPoints: boolean,
+    options: { allowPoints?: boolean } = { allowPoints: false },
   ): Promise<GeolocationGeometry> {
     return await Sentry.startSpan({ name: "GeoAPIClient.resolveGeometry" }, async () => {
       const responseJSON = await this.resolveGeolocationViaGeoAPI(geolocationId);
@@ -95,11 +95,11 @@ export class GeoAPIClientImpl implements GeoAPIClient {
       const { type, coordinates } = geometry || {};
       if (type && coordinates) {
         const locationName = properties?.formatted;
-        if (type === "Point" && !allowPoints && locationName) {
+        if (type === "Point" && !options.allowPoints && locationName) {
           logger.debug(`Retrieved point as geolocation, will retry with lookup for location ${locationName}`);
           const placeId = await this.resolvePlaceIdByName(locationName);
           if (placeId && placeId !== geolocationId) {
-            return this.resolveGeometry(placeId, true);
+            return this.resolveGeometry(placeId, { allowPoints: true });
           }
         }
         return { type, coordinates };

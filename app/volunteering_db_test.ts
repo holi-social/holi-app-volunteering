@@ -509,7 +509,7 @@ describe("VolunteeringDB", () => {
             geolocationId: "mock-geolocation-id",
           });
           assertSpyCall(geoAPIClient.resolveGeometry as Stub, 0, {
-            args: ["mock-geolocation-id", false],
+            args: ["mock-geolocation-id"],
           });
         },
       );

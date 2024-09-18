@@ -70,7 +70,7 @@ describe("GeoAPIClient", () => {
     it("fetches geometry for place id", async () => {
       stubFetch(geometryResponseMultipolygon);
 
-      const response = await client.resolveGeometry(testPlaceId, false);
+      const response = await client.resolveGeometry(testPlaceId);
 
       assertEquals(response, geometryMultipolygon);
     });
@@ -78,13 +78,13 @@ describe("GeoAPIClient", () => {
     it("throws error for invalid response when fetching geometry", async () => {
       stubFetch(invalidResponse);
 
-      await assertRejects(() => client.resolveGeometry(testPlaceId, false));
+      await assertRejects(() => client.resolveGeometry(testPlaceId));
     });
 
     it("retries fetching geometry if geometry is only a point", async () => {
       stubFetchWithResponses([geometryResponsePoint, autocompleteResponse, geometryResponseMultipolygon]);
 
-      const response = await client.resolveGeometry(testPlaceId, false);
+      const response = await client.resolveGeometry(testPlaceId);
 
       assertEquals(response, geometryMultipolygon);
     });
@@ -92,7 +92,7 @@ describe("GeoAPIClient", () => {
     it("does not retry fetching geometry if points are allowed", async () => {
       stubFetchWithResponses([geometryResponsePoint]);
 
-      const response = await client.resolveGeometry(testPlaceId, true);
+      const response = await client.resolveGeometry(testPlaceId, { allowPoints: true });
 
       assertEquals(response, geometryPoint);
     });
@@ -100,7 +100,7 @@ describe("GeoAPIClient", () => {
     it("only retries fetching geometry if geometry is only a point once", async () => {
       stubFetchWithResponses([geometryResponsePoint, autocompleteResponse, geometryResponsePoint]);
 
-      const response = await client.resolveGeometry(testPlaceId, false);
+      const response = await client.resolveGeometry(testPlaceId);
 
       assertEquals(response, geometryPoint);
     });
@@ -109,7 +109,7 @@ describe("GeoAPIClient", () => {
       const autocompleteResponseSamePlaceId = [{ id: testPlaceId }];
       stubFetchWithResponses([geometryResponsePoint, autocompleteResponseSamePlaceId]);
 
-      const response = await client.resolveGeometry(testPlaceId, false);
+      const response = await client.resolveGeometry(testPlaceId);
 
       assertEquals(response, geometryPoint);
     });
@@ -118,7 +118,7 @@ describe("GeoAPIClient", () => {
       const emptyAutocompleteResponse = { data: { placesAutocomplete: [] } };
       stubFetchWithResponses([geometryResponsePoint, emptyAutocompleteResponse]);
 
-      const response = await client.resolveGeometry(testPlaceId, false);
+      const response = await client.resolveGeometry(testPlaceId);
 
       assertEquals(response, geometryPoint);
     });
@@ -126,7 +126,7 @@ describe("GeoAPIClient", () => {
     it("handles invalid autocomplete response when retrying fetching geometry", async () => {
       stubFetchWithResponses([geometryResponsePoint, invalidResponse]);
 
-      const response = await client.resolveGeometry(testPlaceId, false);
+      const response = await client.resolveGeometry(testPlaceId);
 
       assertEquals(response, geometryPoint);
     });
@@ -134,7 +134,7 @@ describe("GeoAPIClient", () => {
     it("throws error for invalid geometry response when retrying fetching geometry", async () => {
       stubFetchWithResponses([geometryResponsePoint, autocompleteResponse, invalidResponse]);
 
-      await assertRejects(() => client.resolveGeometry(testPlaceId, false));
+      await assertRejects(() => client.resolveGeometry(testPlaceId));
     });
   });
 });
