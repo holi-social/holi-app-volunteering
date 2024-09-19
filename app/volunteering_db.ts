@@ -15,6 +15,7 @@ import {
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
 import { logger } from "./logging.ts";
+import { BadRequestError } from "./server.ts";
 
 export type VolunteeringDBConfig = {
   hostname: string;
@@ -367,7 +368,9 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           skills,
           geolocationId,
         ).catch((reason) => {
-          logger.error("Error retrieving recommendations. Reason: ", reason);
+          if (!BadRequestError.isBadRequest(reason)) {
+            logger.error("Error retrieving recommendations. Reason: ", reason);
+          }
           throw reason;
         });
         const recos = result.rows.map((row) =>
@@ -393,8 +396,10 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           topics,
           skills,
           geolocationId,
-        ).catch((reason) => {
-          logger.error("Error retrieving recommendations. Reason: ", reason);
+        ).catch((reason: Error) => {
+          if (!BadRequestError.isBadRequest(reason)) {
+            logger.error("Error retrieving recommendations. Reason: ", reason);
+          }
           throw reason;
         });
         const recos = result.rows.map((row) => toEngagementRecommendation(this.imageProxyBaseUrl, row, topics, skills));
@@ -450,7 +455,9 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
       );
     } else {
       return Promise.reject(
-        "It is required to provide at least one of (topics, skills, or location) in order to retrieve recommendations",
+        new BadRequestError(
+          "It is required to provide at least one of (topics, skills, or location) in order to retrieve recommendations",
+        ),
       );
     }
   }

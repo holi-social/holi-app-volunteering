@@ -10,7 +10,16 @@ import {
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
-import { Client, createSchema, createYoga, deadline, DeadlineError, Sentry, useResponseCache } from "./deps.ts";
+import {
+  Client,
+  createSchema,
+  createYoga,
+  deadline,
+  DeadlineError,
+  GraphQLError,
+  Sentry,
+  useResponseCache,
+} from "./deps.ts";
 import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
 import { logger } from "./logging.ts";
 import { PostgresVolunteeringDB, VolunteeringDB } from "./volunteering_db.ts";
@@ -188,6 +197,20 @@ const createResolvers = (
       config.fake ? Promise.resolve({ id: parameters.id }) : trackEngagementView(config.voltastics)(parameters),
   },
 });
+
+export class BadRequestError extends GraphQLError {
+  constructor(message: string) {
+    super(message, {
+      extensions: {
+        code: "BAD_REQUEST",
+      },
+    });
+  }
+  static isBadRequest(error: Error): boolean {
+    // deno-lint-ignore no-explicit-any
+    return error.name === "GraphQLError" && ((error as GraphQLError).extensions as any).code === "BAD_REQUEST";
+  }
+}
 
 export const createGraphQLServer = (config: ServerConfig, volunteeringDB: VolunteeringDB): GraphQLServer => {
   const plugins = config.cacheEnabled
