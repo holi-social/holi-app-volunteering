@@ -44,7 +44,7 @@ const typeDefs = `
       imageUrl: String
       imageUrlOriginal: String
       source: String
-      categories: [String]!
+      categories: [String]! @deprecated(reason: "Use topics & skills instead.")
       organizer: Organizer
       location: String
       latitude: Float
@@ -118,7 +118,7 @@ const typeDefs = `
 
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
-        engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse!
+        engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse! @deprecated(reason: "Use the engagementRecos query instead.")
         
         """
         Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
@@ -132,7 +132,7 @@ const typeDefs = `
         
         engagement(id: String!): Engagement
         
-        categories: CategoriesResponse!
+        categories: CategoriesResponse! @deprecated(reason: "Not in use anymore since the introduction of the engagementRecos query")
         
         filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
     }
