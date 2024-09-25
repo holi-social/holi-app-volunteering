@@ -17,7 +17,6 @@ for i in {1..3}; do
   "$@"
   retval=$?
   set -e
-  # shellcheck disable=SC2181
   if [ $retval != 0 ]; then
     if [ "$i" -lt "3" ]; then
       echo "command '$*' failed in try $i, retrying after 60 seconds"
