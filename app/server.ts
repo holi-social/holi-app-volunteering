@@ -44,7 +44,7 @@ const typeDefs = `
       imageUrl: String
       imageUrlOriginal: String
       source: String
-      categories: [String]! @deprecated(reason: "Use topics & skills instead.")
+      categories: [String]! @deprecated(reason: "Use topics & skills instead. (since v1.34)")
       organizer: Organizer
       location: String
       latitude: Float
@@ -63,17 +63,17 @@ const typeDefs = `
       """
       If this engagement is part of a recommendation query response, matchedTopics contains the slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
-      matchedTopics: [String] @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead.")
+      matchedTopics: [String] @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead. (since v1.34)")
       
       """
       If this engagement is part of a recommendation query response, matchedSkills contains the slugs of matched skills. The order is defined as follows: 1) skills that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
-      matchedSkills: [String] @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead.")
+      matchedSkills: [String] @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead. (since v1.34)")
       
       """
       If this engagement is part of a recommendation query response, matchedGeoLocationDistanceInMeters contains the distance (in meters) between the engagement and the location given in the query.
       """
-      matchedGeoLocationDistanceInMeters: Float @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead.")
+      matchedGeoLocationDistanceInMeters: Float @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead. (since v1.34)")
     }
 
     type Category {
@@ -118,12 +118,12 @@ const typeDefs = `
 
     type Query {
         # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
-        engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse! @deprecated(reason: "Use the engagementRecos query instead.")
+        engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse! @deprecated(reason: "Use the engagementRecos query instead. (since v1.34)")
         
         """
         Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
         """
-        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse! @deprecated(reason: "Use the engagementRecos query instead.")
+        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse! @deprecated(reason: "Use the engagementRecos query instead. (since v1.34)")
         
         """
         Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
@@ -132,7 +132,7 @@ const typeDefs = `
         
         engagement(id: String!): Engagement
         
-        categories: CategoriesResponse! @deprecated(reason: "Not in use anymore since the introduction of the engagementRecos query")
+        categories: CategoriesResponse! @deprecated(reason: "Not in use anymore since the introduction of the engagementRecos query (since v1.34)")
         
         filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
     }
