@@ -12,27 +12,30 @@ export TF_LOG=DEBUG
 # * GCP stuff not allowing our resources to be deleted.
 # Most of the time, retrying a destroy fixes these causes.
 retry() {
-for i in {1..3}; do
-  set +e
-  "$@"
-  retval=$?
-  set -e
-  if [ $retval != 0 ]; then
-    if [ "$i" -lt "3" ]; then
-      echo "command '$*' failed in try $i, retrying after 60 seconds"
-      sleep 60 # let things settle a bit
+  for i in {1..3}; do
+    set +e
+    "$@"
+    retval=$?
+    set -e
+    if [ "$retval" -ne "0" ]; then
+      if [ "$i" -lt "3" ]; then
+        echo "command '$*' failed in try $i, retrying after 60 seconds"
+        sleep 60 # let things settle a bit
+      else
+        echo "command '$*' failed in try $i, giving up"
+        exit $retval
+      fi
     else
-      echo "command '$*' failed in try $i, giving up"
+      break # success
     fi
-  fi
-done
+  done
 }
 
-cd terraform/environments
+cd "$(dirname "$0")"/..
 
 TF_LOG_PATH=terraform-init.log       terraform init
 TF_LOG_PATH=terraform-version.log    terraform version
-TF_LOG_PATH=terraform-workspace.log  terraform workspace new "$1" || terraform workspace select "$1"
-retry TF_LOG_PATH=terraform-destroy.log    terraform destroy -auto-approve -var="image_tag=dummy"
+TF_LOG_PATH=terraform-workspace.log  terraform workspace select -or-create=true "$1"
+TF_LOG_PATH=terraform-destroy.log    retry terraform destroy -auto-approve -var="image_tag=dummy"
 TF_LOG_PATH=terraform-ws-default.log terraform workspace select default
 TF_LOG_PATH=terraform-ws-delete.log  terraform workspace delete "$1"
