@@ -290,6 +290,8 @@ export class VolunteeringDB {
     });
   }
 
+  
+
   async querySimilarRecommendations(
     id: string,
     offset: number,
@@ -310,9 +312,25 @@ export class VolunteeringDB {
       throw new Error(`No volunteering opportunity found for id ${id}`);
     }
 
-    const embedding = result.rows[0].embedding_array;
-    const lat = result.rows[0].latitude;
-    const lon = result.rows[0].longitude;
+    const row = result.rows[0];
+
+    // Use safer checks with 'in' operator for runtime type checking
+    if (
+      !('embedding_array' in row) || 
+      !Array.isArray(row.embedding_array) ||
+      (row.latitude !== null && typeof row.latitude !== 'number') ||
+      (row.longitude !== null && typeof row.longitude !== 'number')
+    ) {
+      throw new Error(`Invalid data format for id ${id}`);
+    }
+
+    const embedding = row.embedding_array;
+    const lat = row.latitude;
+    const lon = row.longitude;
+
+    // const embedding = result.rows[0].embedding_array;
+    // const lat = result.rows[0].latitude;
+    // const lon = result.rows[0].longitude;
 
     if (lat == null || lon == null) {
       throw new Error(`Location not available for id ${id}`);
