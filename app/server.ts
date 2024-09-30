@@ -7,6 +7,7 @@ import {
   EngagementResponse,
   EngagementsParameters,
   EngagementsResponse,
+  SimilarRecommendationsParameters,
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from "./types.ts";
@@ -136,6 +137,14 @@ const createResolvers = (
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
         : volunteeringDB.findRecommendations(parameters),
+    similarRecommendations: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: SimilarRecommendationsParameters,
+    ): Promise<EngagementsResponse> =>
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : volunteeringDB.findSimilarRecommendations(parameters),
   },
   Mutation: {
     trackEngagementView: (

@@ -61,6 +61,12 @@ export type EngagementRecommendationsParameters = {
   location?: PlaceDetails;
 };
 
+export type SimilarRecommendationsParameters = {
+  limit: number;
+  offset: number;
+  id: string;
+};
+
 export type PlaceDetails = {
   name: string;
   geolocation: GeolocationGeoJSON;

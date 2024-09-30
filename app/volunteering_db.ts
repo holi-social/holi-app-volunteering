@@ -3,6 +3,7 @@ import {
   Engagement,
   EngagementRecommendationsParameters,
   EngagementsResponse,
+  SimilarRecommendationsParameters,
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
 import { PlaceDetails } from "./types.ts";
@@ -269,5 +270,112 @@ export class VolunteeringDB {
     FROM vector_matches;
   `;
     return result.rows.map(toEngagement(this.imageProxyBaseUrl));
+  }
+
+  async findSimilarRecommendations(
+    params: SimilarRecommendationsParameters,
+  ): Promise<EngagementsResponse> {
+    const recos = await this.querySimilarRecommendations(
+      params.id,
+      params.offset < 0 ? 0 : params.offset,
+      params.limit > 100 || params.limit < 1 ? 10 : params.limit,
+    )
+      .catch((reason) => {
+        console.error("Error executing query", reason);
+        throw reason;
+      });
+    return Promise.resolve({
+      totalResults: recos.length,
+      data: recos,
+    });
+  }
+
+  async querySimilarRecommendations(
+    id: string,
+    offset: number,
+    limit: number,
+  ): Promise<Engagement[]> {
+    // Step 1: Fetch the embedding and location (latitude, longitude) for the given opportunity
+    const embeddingQuery = `
+      SELECT e.embedding_array, latitude, longitude
+      FROM volunteering_voltastics_similar_embeddings e
+      JOIN volunteering_voltastics_with_classification v
+      ON e.id = v.id
+      WHERE e.id = ${id}
+    `;
+
+    const result = await this.client.queryObject(embeddingQuery);
+
+    if (!result.rows.length) {
+      throw new Error(`No volunteering opportunity found for id ${id}`);
+    }
+
+    const embedding = result.rows[0].embedding_array;
+    const lat = result.rows[0].latitude;
+    const lon = result.rows[0].longitude;
+
+    if (lat == null || lon == null) {
+      throw new Error(`Location not available for id ${id}`);
+    }
+
+    // Step 2: Compute cosine similarity and factor in location proximity
+    const rankingWeightCosineSimilarity = 0.7; // Cosine similarity weight
+    const rankingWeightDistance = 0.3; // Proximity weight
+    const maxAcceptableDistance = 50000; // 50 km max distance
+
+    await this.client.queryObject(`CREATE EXTENSION IF NOT EXISTS postgis;`);
+
+    let recommendationsQuery;
+
+    // Step 3: Check if latitude and longitude are available
+    if (lat == null || lon == null) {
+      // If location data is missing, compute only cosine similarity
+      recommendationsQuery = `
+        WITH similarity_calculations AS (
+          SELECT v.*, 
+                1 - (e.embedding_array <=> ${embedding}) AS cosine_similarity
+          FROM volunteering_voltastics_similar_embeddings e
+          JOIN volunteering_voltastics_with_classification v
+          ON e.id = v.id
+          WHERE e.id != ${id}  -- Ensure current opportunity is excluded
+        )
+        SELECT *
+        FROM similarity_calculations
+        ORDER BY cosine_similarity DESC
+        OFFSET ${offset}
+        LIMIT ${limit};
+      `;
+    } else {
+      // If location data is available, compute both cosine similarity and distance
+      recommendationsQuery = `
+        WITH similarity_calculations AS (
+          SELECT v.*, 
+                1 - (e.embedding_array <=> ${embedding}) AS cosine_similarity,
+                ST_Distance(
+                    ST_SetSRID(ST_MakePoint(v.longitude, v.latitude), 4326),
+                    ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326)
+                ) AS distance
+          FROM volunteering_voltastics_similar_embeddings e
+          JOIN volunteering_voltastics_with_classification v
+          ON e.id = v.id
+          WHERE e.id != ${id}  -- Ensure current opportunity is excluded
+        ), scored_recommendations AS (
+          SELECT *,
+                (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+                (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
+          FROM similarity_calculations
+        )
+        SELECT *
+        FROM scored_recommendations
+        ORDER BY weighted_score DESC
+        OFFSET ${offset}
+        LIMIT ${limit};
+      `;
+    }
+
+    const recosResult = await this.client.queryObject<VolunteeringDBRow>(
+      recommendationsQuery,
+    );
+    return recosResult.rows.map(toEngagement(this.imageProxyBaseUrl));
   }
 }
