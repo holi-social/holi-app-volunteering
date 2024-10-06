@@ -49,7 +49,7 @@ export type VolunteeringDBRow = {
 export type similarEmbeddingRow = {
   longitude?: number;
   latitude?: number;
-  embedding_array: string; // JSON containing `number[]`
+  embedding_array: string; // JSON containing `number[], i.e. embedding`
 };
 
 const TOPICS_VECTOR_INDICES = new Map<string, number>([
