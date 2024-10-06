@@ -12,6 +12,7 @@ import {
   FilteredEngagementsParameters,
   GeolocationCoordinates,
   GeolocationGeometry,
+  SimilarRecommendationsParameters,
 } from "./types.ts";
 import { isNonEmptyString, safeJsonParse } from "./utils.ts";
 import { logger } from "./logging.ts";
@@ -43,6 +44,12 @@ export type VolunteeringDBRow = {
   cosine_similarity: number;
   distance_in_meters: number;
   total_results: number;
+};
+
+export type similarEmbeddingRow = {
+  longitude?: number;
+  latitude?: number;
+  embedding_array: string; // JSON containing `number[]`
 };
 
 const TOPICS_VECTOR_INDICES = new Map<string, number>([
@@ -317,6 +324,7 @@ export interface VolunteeringDB {
   engagementRecommendations(params: EngagementRecosParameters): Promise<EngagementsResponse>;
   engagementRecos(params: EngagementRecosParameters): Promise<EngagementRecosResponse>;
   filteredEngagements(params: FilteredEngagementsParameters): Promise<EngagementsResponse>;
+  findSimilarRecommendations(params: SimilarRecommendationsParameters): Promise<EngagementsResponse>;
 }
 
 export class PostgresVolunteeringDB implements VolunteeringDB {
@@ -589,6 +597,117 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
       limit > MAX_LIMIT || limit < 1 ? DEFAULT_LIMIT : limit,
       geometry,
     );
+  }
+
+  // Method to find similar recommendations based on ID
+  async findSimilarRecommendations(
+    params: SimilarRecommendationsParameters,
+  ): Promise<EngagementsResponse> {
+    const recos = await this.querySimilarRecommendations(
+      params.id,
+      params.offset < 0 ? 0 : params.offset,
+      params.limit > 100 || params.limit < 1 ? 10 : params.limit,
+    ).catch((reason) => {
+      console.error("Error executing query", reason);
+      throw reason;
+    });
+    return Promise.resolve({
+      totalResults: recos.length,
+      data: recos,
+    });
+  }
+
+  // Query similar recommendations based on embeddings and location
+  private async querySimilarRecommendations(
+    id: string,
+    offset: number,
+    limit: number,
+  ): Promise<Engagement[]> {
+    const embeddingQuery = `
+      SELECT latitude, longitude, e.embedding_array
+      FROM volunteering_voltastics_similar_embeddings e
+      JOIN volunteering_voltastics_with_classification v
+      ON e.id = v.id
+      WHERE e.id = ${id}
+    `;
+    const result = await this.client.queryObject<similarEmbeddingRow>(embeddingQuery);
+
+    if (!result.rows.length) {
+      throw new Error(`No volunteering opportunity found for id ${id}`);
+    }
+
+    const row = result.rows[0];
+
+    // if (
+    //   !("embedding_array" in row) ||
+    //   !Array.isArray(row.embedding_array) ||
+    //   (row.latitude !== null && typeof row.latitude !== "number") ||
+    //   (row.longitude !== null && typeof row.longitude !== "number")
+    // ) {
+    //   throw new Error(`Invalid data format for id ${id}`);
+    // }
+
+    const lat = row.latitude ?? null;
+    const lon = row.longitude ?? null;
+    const embedding = JSON.parse(row.embedding_array) as number[];
+
+    const recommendationsQuery = this.buildRecommendationsQuery(id, embedding, lat, lon, offset, limit);
+
+    const recosResult = await this.client.queryObject<VolunteeringDBRow>(recommendationsQuery);
+    return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row));
+  }
+
+  private buildRecommendationsQuery(
+    id: string,
+    embedding: number[],
+    lat: number | null,
+    lon: number | null,
+    offset: number,
+    limit: number,
+  ) {
+    const rankingWeightCosineSimilarity = 0.7;
+    const rankingWeightDistance = 0.3;
+    const maxAcceptableDistance = 50000;
+
+    if (lat == null || lon == null) {
+      return `
+        WITH similarity_calculations AS (
+          SELECT v.*, 
+                1 - (e.embedding_array <=> ${embedding}) AS cosine_similarity
+          FROM volunteering_voltastics_similar_embeddings e
+          JOIN volunteering_voltastics_with_classification v
+          ON e.id = v.id
+          WHERE e.id != ${id}
+        )
+        SELECT *
+        FROM similarity_calculations
+        ORDER BY cosine_similarity DESC
+        OFFSET ${offset}
+        LIMIT ${limit};
+      `;
+    } else {
+      return `
+        WITH similarity_calculations AS (
+          SELECT v.*,
+                1 - (embedding_array <=> ${embedding}) AS cosine_similarity,
+                ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326), 3857) AS distance
+          FROM volunteering_voltastics_similar_embeddings e
+          JOIN volunteering_voltastics_with_classification v
+          ON e.id = v.id
+          WHERE e.id != ${id}
+        ), scored_recommendations AS (
+          SELECT *,
+                (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+                (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
+          FROM similarity_calculations
+        )
+        SELECT *
+        FROM scored_recommendations
+        ORDER BY weighted_score DESC
+        OFFSET ${offset}
+        LIMIT ${limit};
+      `;
+    }
   }
 
   private async queryFilteredEngagements(
