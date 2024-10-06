@@ -39,12 +39,6 @@ export type EngagementsResponse = {
   data: Engagement[];
 };
 
-export type SimilarRecommendationsParameters = {
-  limit: number;
-  offset: number;
-  id: string;
-};
-
 export type EngagementReco = {
   engagement: Engagement;
 
