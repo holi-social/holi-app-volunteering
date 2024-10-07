@@ -483,6 +483,10 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           `queryRecosBasedOnTopicsAndSkills ${JSON.stringify({ offset, limit, topics, skills })}`,
         );
         const queryVector = JSON.stringify(queryEmbeddingVector(topics, skills));
+        logger.debug(
+          `queryRecosBasedOnTopicsAndSkills ${queryVector}`,
+        );
+
         return await this.client.queryObject<VolunteeringDBRow>`
           WITH vector_matches AS (SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
                                   FROM volunteering_voltastics_with_classification
@@ -638,75 +642,55 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
 
     const row = result.rows[0];
 
-    // if (
-    //   !("embedding_array" in row) ||
-    //   !Array.isArray(row.embedding_array) ||
-    //   (row.latitude !== null && typeof row.latitude !== "number") ||
-    //   (row.longitude !== null && typeof row.longitude !== "number")
-    // ) {
-    //   throw new Error(`Invalid data format for id ${id}`);
-    // }
-
     const lat = row.latitude ?? null;
     const lon = row.longitude ?? null;
     const embedding = JSON.parse(row.embedding_array) as number[];
+    const queryVectorString = JSON.stringify(embedding);
 
-    const recommendationsQuery = this.buildRecommendationsQuery(id, embedding, lat, lon, offset, limit);
-
-    const recosResult = await this.client.queryObject<VolunteeringDBRow>(recommendationsQuery);
-    return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row));
-  }
-
-  private buildRecommendationsQuery(
-    id: string,
-    embedding: number[],
-    lat: number | null,
-    lon: number | null,
-    offset: number,
-    limit: number,
-  ) {
     const rankingWeightCosineSimilarity = 0.7;
     const rankingWeightDistance = 0.3;
     const maxAcceptableDistance = 50000;
 
     if (lat == null || lon == null) {
-      return `
-        WITH similarity_calculations AS (
-          SELECT v.*, 
-                1 - (e.embedding_array <=> ${embedding}) AS cosine_similarity
-          FROM volunteering_voltastics_similar_embeddings e
-          JOIN volunteering_voltastics_with_classification v
-          ON e.id = v.id
-          WHERE e.id != ${id}
-        )
-        SELECT *
-        FROM similarity_calculations
-        ORDER BY cosine_similarity DESC
-        OFFSET ${offset}
-        LIMIT ${limit};
+      const recosResult = await this.client.queryObject<VolunteeringDBRow>`
+      WITH similarity_calculations AS (
+        SELECT v.*, 
+              1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity
+        FROM volunteering_voltastics_similar_embeddings e
+        JOIN volunteering_voltastics_with_classification v
+        ON e.id = v.id
+        WHERE e.id != ${id}
+      )
+      SELECT *
+      FROM similarity_calculations
+      ORDER BY cosine_similarity DESC
+      OFFSET ${offset}
+      LIMIT ${limit};
       `;
+      return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row));
     } else {
-      return `
-        WITH similarity_calculations AS (
-          SELECT v.*,
-                1 - (embedding_array <=> ${embedding}) AS cosine_similarity,
-                ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326), 3857) AS distance
-          FROM volunteering_voltastics_similar_embeddings e
-          JOIN volunteering_voltastics_with_classification v
-          ON e.id = v.id
-          WHERE e.id != ${id}
-        ), scored_recommendations AS (
-          SELECT *,
-                (${rankingWeightCosineSimilarity} * cosine_similarity) + 
-                (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
-          FROM similarity_calculations
-        )
-        SELECT *
-        FROM scored_recommendations
-        ORDER BY weighted_score DESC
-        OFFSET ${offset}
-        LIMIT ${limit};
+      const recosResult = await this.client.queryObject<VolunteeringDBRow>`
+      WITH similarity_calculations AS (
+        SELECT v.*,
+              1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity,
+              ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326), 3857) AS distance
+        FROM volunteering_voltastics_similar_embeddings e
+        JOIN volunteering_voltastics_with_classification v
+        ON e.id = v.id
+        WHERE e.id != ${id}
+      ), scored_recommendations AS (
+        SELECT *,
+              (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+              (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
+        FROM similarity_calculations
+      )
+      SELECT *
+      FROM scored_recommendations
+      ORDER BY weighted_score DESC
+      OFFSET ${offset}
+      LIMIT ${limit};
       `;
+      return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row));
     }
   }
 
