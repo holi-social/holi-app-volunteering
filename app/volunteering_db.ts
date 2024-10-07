@@ -148,7 +148,7 @@ const EMBEDDING_DIMENSIONS = TOPICS_VECTOR_INDICES.size +
  * Should be aligned with the precomputed binary_embedding.
  */
 const MATCH_TOPIC_CONFIDENCE_THRESHOLD = 0.8;
-const MATCH_SKILL_CONFIDENCE_THRESHOLD = 0.8;
+const MATCH_SKILL_CONFIDENCE_THRESHOLD = 0.9;
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 10;
 
