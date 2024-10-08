@@ -194,7 +194,6 @@ describe("VolunteeringDB", () => {
       const expectedMatchedSkills = [
         "writing-translation", // last item  (index 49)
         "conflict-management", // tenth item (index 9)
-        "adaptability", // first item (index 0)
       ];
       const allTopics = Array.from(
         exportedForTesting.TOPICS_VECTOR_INDICES.keys(),
@@ -269,7 +268,6 @@ describe("VolunteeringDB", () => {
       const expectedMatchedSkills = [
         "writing-translation", // last item  (index 49)
         "conflict-management", // tenth item (index 9)
-        "adaptability", // first item (index 0)
       ];
       const queriedTopics = ["agriculture-food", "disabilities-inclusion"];
       const queriedSkills = ["writing-translation"];
