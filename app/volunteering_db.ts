@@ -476,12 +476,10 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         );
         const queryVector = JSON.stringify(queryEmbeddingVector(topics, skills));
         return await this.client.queryObject<VolunteeringDBRow>`
-          WITH vector_matches AS (SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity
-                                  FROM volunteering_voltastics_with_classification
-                                  ORDER BY cosine_similarity DESC)
-          SELECT *, count(*) OVER () AS total_results
-          FROM vector_matches
-          OFFSET ${offset} LIMIT ${limit};
+          SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity, count(*) OVER () as total_results
+          FROM volunteering_voltastics_with_classification
+          ORDER BY cosine_similarity DESC
+          OFFSET ${offset} LIMIT ${limit}
         `;
       },
     );
