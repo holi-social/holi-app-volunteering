@@ -610,7 +610,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     const recos = await this.querySimilarRecommendations(
       params.id,
       params.offset < 0 ? 0 : params.offset,
-      params.limit > 100 || params.limit < 1 ? 10 : params.limit,
+      params.limit > MAX_LIMIT || params.limit < 1 ? DEFAULT_LIMIT : params.limit,
     ).catch((reason) => {
       console.error("Error executing query", reason);
       throw reason;
@@ -627,71 +627,82 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     offset: number,
     limit: number,
   ): Promise<Engagement[]> {
-    const embeddingQuery = `
-      SELECT latitude, longitude, e.embedding_array
-      FROM volunteering_voltastics_similar_embeddings e
-      JOIN volunteering_voltastics_with_classification v
-      ON e.id = v.id
-      WHERE e.id = ${id}
-    `;
-    const result = await this.client.queryObject<similarEmbeddingRow>(embeddingQuery);
+    return await Sentry.startSpan(
+      { name: "VolunteeringDB.querySimilarRecommendations", op: "db.query" },
+      async () => {
+        
+        logger.debug(
+          `querySimilarRecommendations ${
+            JSON.stringify({id, offset, limit})
+          }`,
+        );
 
-    if (!result.rows.length) {
-      throw new Error(`No volunteering opportunity found for id ${id}`);
-    }
+        const result = await this.client.queryObject<similarEmbeddingRow>`
+          SELECT latitude, longitude, e.embedding_array
+          FROM volunteering_voltastics_similar_embeddings e
+          JOIN volunteering_voltastics_with_classification v
+          ON e.id = v.id
+          WHERE e.id = ${id}
+        `;
 
-    const row = result.rows[0];
+        if (!result.rows.length) {
+          throw new Error(`No volunteering opportunity found for id ${id}`);
+        }
 
-    const lat = row.latitude ?? null;
-    const lon = row.longitude ?? null;
-    const embedding = JSON.parse(row.embedding_array) as number[];
-    const queryVectorString = JSON.stringify(embedding);
+        const row = result.rows[0];
+        const lat = row.latitude ?? null;
+        const lon = row.longitude ?? null;
+        const embedding = JSON.parse(row.embedding_array) as number[];
+        const queryVectorString = JSON.stringify(embedding);
 
-    const rankingWeightCosineSimilarity = 0.7;
-    const rankingWeightDistance = 0.3;
-    const maxAcceptableDistance = 50000;
+        const rankingWeightCosineSimilarity = 0.7;
+        const rankingWeightDistance = 0.3;
+        const maxAcceptableDistanceInMeters = 50000;
 
-    if (lat == null || lon == null) {
-      const recosResult = await this.client.queryObject<VolunteeringDBRow>`
-      WITH similarity_calculations AS (
-        SELECT v.*, 
-              1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity
-        FROM volunteering_voltastics_similar_embeddings e
-        JOIN volunteering_voltastics_with_classification v
-        ON e.id = v.id
-        WHERE e.id != ${id}
-      )
-      SELECT *
-      FROM similarity_calculations
-      ORDER BY cosine_similarity DESC
-      OFFSET ${offset}
-      LIMIT ${limit};
-      `;
-      return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row));
-    } else {
-      const recosResult = await this.client.queryObject<VolunteeringDBRow>`
-      WITH similarity_calculations AS (
-        SELECT v.*,
-              1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity,
-              ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326), 3857) AS distance
-        FROM volunteering_voltastics_similar_embeddings e
-        JOIN volunteering_voltastics_with_classification v
-        ON e.id = v.id
-        WHERE e.id != ${id}
-      ), scored_recommendations AS (
-        SELECT *,
-              (${rankingWeightCosineSimilarity} * cosine_similarity) + 
-              (${rankingWeightDistance} * (1 - LEAST(distance, ${maxAcceptableDistance}) / ${maxAcceptableDistance})) AS weighted_score
-        FROM similarity_calculations
-      )
-      SELECT *
-      FROM scored_recommendations
-      ORDER BY weighted_score DESC
-      OFFSET ${offset}
-      LIMIT ${limit};
-      `;
-      return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row));
-    }
+        if (lat == null || lon == null) {
+          const recosResult = await this.client.queryObject<VolunteeringDBRow>`
+          WITH similarity_calculations AS (
+            SELECT v.*, 
+                  1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity
+            FROM volunteering_voltastics_similar_embeddings e
+            JOIN volunteering_voltastics_with_classification v
+            ON e.id = v.id
+            WHERE e.id != ${id}
+          )
+          SELECT *
+          FROM similarity_calculations
+          ORDER BY cosine_similarity DESC
+          OFFSET ${offset}
+          LIMIT ${limit};
+          `;
+          return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row));
+        } 
+        else {
+          const recosResult = await this.client.queryObject<VolunteeringDBRow>`
+          WITH similarity_calculations AS (
+            SELECT v.*,
+                  1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity,
+                  ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326), 3857) AS distance_in_meters
+            FROM volunteering_voltastics_similar_embeddings e
+            JOIN volunteering_voltastics_with_classification v
+            ON e.id = v.id
+            WHERE e.id != ${id}
+          ), scored_recommendations AS (
+            SELECT *,
+                  (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+                  (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxAcceptableDistanceInMeters}) / ${maxAcceptableDistanceInMeters})) AS weighted_score
+            FROM similarity_calculations
+          )
+          SELECT *
+          FROM scored_recommendations
+          ORDER BY weighted_score DESC
+          OFFSET ${offset}
+          LIMIT ${limit};
+          `;
+          return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row));
+        }
+      },
+    );
   }
 
   private async queryFilteredEngagements(

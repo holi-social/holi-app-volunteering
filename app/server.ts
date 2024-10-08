@@ -235,6 +235,7 @@ export const createGraphQLServer = (config: ServerConfig, volunteeringDB: Volunt
           "Query.filteredEngagements": config.cacheTtlMsDB,
           "Query.engagementRecommendations": config.cacheTtlMsDB,
           "Query.engagementRecos": config.cacheTtlMsDB,
+          "Query.similarRecommendations": config.cacheTtlMsDB,
         },
       }),
     ]
