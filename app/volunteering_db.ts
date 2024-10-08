@@ -630,11 +630,8 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     return await Sentry.startSpan(
       { name: "VolunteeringDB.querySimilarRecommendations", op: "db.query" },
       async () => {
-        
         logger.debug(
-          `querySimilarRecommendations ${
-            JSON.stringify({id, offset, limit})
-          }`,
+          `querySimilarRecommendations ${JSON.stringify({ id, offset, limit })}`,
         );
 
         const result = await this.client.queryObject<similarEmbeddingRow>`
@@ -676,8 +673,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           LIMIT ${limit};
           `;
           return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row));
-        } 
-        else {
+        } else {
           const recosResult = await this.client.queryObject<VolunteeringDBRow>`
           WITH similarity_calculations AS (
             SELECT v.*,
