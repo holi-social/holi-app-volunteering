@@ -8,8 +8,8 @@ import {
   returnsNext,
   Stub,
   stub,
-} from "./dev_deps.ts";
-import { processGqlRequest, stubFetch } from "./common_test.ts";
+} from './dev_deps.ts'
+import { processGqlRequest, stubFetch } from './common_test.ts'
 
 import {
   CategoriesResponse,
@@ -20,8 +20,8 @@ import {
   EngagementsResponse,
   FilteredEngagementsParameters,
   SimilarRecommendationsParameters,
-} from "./types.ts";
-import { createGraphQLServer, GraphQLServer } from "./server.ts";
+} from './types.ts'
+import { createGraphQLServer, GraphQLServer } from './server.ts'
 
 import {
   apiCategoriesResponse,
@@ -29,22 +29,22 @@ import {
   categories,
   engagementsResponse,
   Munich,
-} from "./voltastics_test_data.ts";
-import { fetchCategories, fetchEngagementOpportunities } from "./voltastics.ts";
-import { VolunteeringDB } from "./volunteering_db.ts";
-import { logger, LogSeverity } from "./logging.ts";
-import { ServerConfig, VoltasticsConfig } from "./config.ts";
+} from './voltastics_test_data.ts'
+import { fetchCategories, fetchEngagementOpportunities } from './voltastics.ts'
+import { VolunteeringDB } from './volunteering_db.ts'
+import { logger, LogSeverity } from './logging.ts'
+import { ServerConfig, VoltasticsConfig } from './config.ts'
 
 logger.setUpLogger(
-  "development",
+  'development',
   LogSeverity.EMERGENCY,
-);
+)
 
 const emptyResponse = {
   success: true,
-};
+}
 
-const validEngagementsResponse = apiSearchEngagementsResponse;
+const validEngagementsResponse = apiSearchEngagementsResponse
 
 const engagementFragment = `
 id
@@ -64,11 +64,11 @@ latitude
 longitude
 topics
 skills
-`;
+`
 
 const categoryFragment = `
 name
-`;
+`
 
 const queryEngagementOpportunities = async (
   graphQLServer: GraphQLServer,
@@ -85,10 +85,10 @@ const queryEngagementOpportunities = async (
         }
       }`,
     { limit: 10, offset: 20, lat: 48.1371079, lon: 11.5753822, radius: 14 },
-  );
+  )
 
-  return (await promise)?.engagementOpportunities as EngagementsResponse;
-};
+  return (await promise)?.engagementOpportunities as EngagementsResponse
+}
 
 const queryCategories = async (
   graphQLServer: GraphQLServer,
@@ -104,34 +104,34 @@ const queryCategories = async (
         }
       }`,
     {},
-  );
+  )
 
-  return response?.categories as CategoriesResponse;
-};
+  return response?.categories as CategoriesResponse
+}
 
 const voltasticsConfigMock: VoltasticsConfig = {
-  baseUrl: "https://test.com/api",
-  apiToken: "ABC123",
-};
+  baseUrl: 'https://test.com/api',
+  apiToken: 'ABC123',
+}
 
 const serverConfigMock: ServerConfig = {
   port: 8080,
   cacheEnabled: true,
   voltastics: voltasticsConfigMock,
-  imageProxyBaseUrl: "https://dev-images.holi.social",
+  imageProxyBaseUrl: 'https://dev-images.holi.social',
   cacheTtlMsVoltastics: 0,
   cacheTtlMsDB: 0,
   fake: false,
   volunteeringDB: {
-    hostname: "fakehost",
-    port: "1234",
-    database: "volunteering",
-    password: "secret",
-    username: "admin",
+    hostname: 'fakehost',
+    port: '1234',
+    database: 'volunteering',
+    password: 'secret',
+    username: 'admin',
     connectionAttempts: 10,
   },
-  geoAPIEndpointUrl: "fakeUrl",
-};
+  geoAPIEndpointUrl: 'fakeUrl',
+}
 
 const noCacheServerConfig = {
   cacheEnabled: false,
@@ -142,108 +142,108 @@ const noCacheServerConfig = {
   cacheTtlMsDB: 0,
   fake: false,
   volunteeringDB: {
-    hostname: "fakehost",
-    port: "1234",
-    database: "volunteering",
-    password: "secret",
-    username: "admin",
+    hostname: 'fakehost',
+    port: '1234',
+    database: 'volunteering',
+    password: 'secret',
+    username: 'admin',
     connectionAttempts: 10,
   },
-  geoAPIEndpointUrl: "fakeUrl",
-};
+  geoAPIEndpointUrl: 'fakeUrl',
+}
 
 const fakeVolunteeringDB = new (class implements VolunteeringDB {
   public engagement(_params: EngagementParameters): Promise<EngagementResponse> {
-    return Promise.reject(new Error("should not have been called"));
+    return Promise.reject(new Error('should not have been called'))
   }
   engagementRecommendations(_params: EngagementRecosParameters): Promise<EngagementsResponse> {
-    return Promise.reject(new Error("should not have been called"));
+    return Promise.reject(new Error('should not have been called'))
   }
   engagementRecos(_params: EngagementRecosParameters): Promise<EngagementRecosResponse> {
-    return Promise.reject(new Error("should not have been called"));
+    return Promise.reject(new Error('should not have been called'))
   }
   filteredEngagements(_params: FilteredEngagementsParameters): Promise<EngagementsResponse> {
-    return Promise.reject(new Error("should not have been called"));
+    return Promise.reject(new Error('should not have been called'))
   }
   similarRecommendations(_params: SimilarRecommendationsParameters): Promise<EngagementsResponse> {
-    return Promise.reject(new Error("should not have been called"));
+    return Promise.reject(new Error('should not have been called'))
   }
-})();
+})()
 
-describe("voltastics", () => {
-  let fetchStub: Stub;
+describe('voltastics', () => {
+  let fetchStub: Stub
 
   beforeEach(() => {
-    fetchStub?.restore();
-  });
+    fetchStub?.restore()
+  })
 
-  describe("querying engagement list", () => {
-    it("calls api with correct parameters", async () => {
-      fetchStub = stubFetch(emptyResponse);
+  describe('querying engagement list', () => {
+    it('calls api with correct parameters', async () => {
+      fetchStub = stubFetch(emptyResponse)
 
       await fetchEngagementOpportunities(serverConfigMock)({
         limit: 10,
         offset: 20,
         location: Munich,
-      });
+      })
 
       const expectedUrl = new URL(
-        "https://test.com/api/searchengagement?limit=10&offset=20&lat=48.1371079&lon=11.5753822&radius=14",
-      );
+        'https://test.com/api/searchengagement?limit=10&offset=20&lat=48.1371079&lon=11.5753822&radius=14',
+      )
 
-      const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
+      const expectedHeaders = { headers: { 'x-voltastics-token': 'ABC123' } }
 
       assertSpyCall(fetchStub, 0, {
         args: [expectedUrl, expectedHeaders],
-      });
-    });
-    it("calls api with default location parameter", async () => {
-      fetchStub = stubFetch(emptyResponse);
+      })
+    })
+    it('calls api with default location parameter', async () => {
+      fetchStub = stubFetch(emptyResponse)
 
       await fetchEngagementOpportunities(serverConfigMock)({
         limit: 10,
         offset: 20,
-      });
+      })
 
       const expectedUrl = new URL(
-        "https://test.com/api/searchengagement?limit=10&offset=20&city=ALL_CITIES",
-      );
+        'https://test.com/api/searchengagement?limit=10&offset=20&city=ALL_CITIES',
+      )
 
-      const expectedHeaders = { headers: { "x-voltastics-token": "ABC123" } };
+      const expectedHeaders = { headers: { 'x-voltastics-token': 'ABC123' } }
 
       assertSpyCall(fetchStub, 0, {
         args: [expectedUrl, expectedHeaders],
-      });
-    });
+      })
+    })
 
-    it("correctly parses empty response", async () => {
-      fetchStub = stubFetch(emptyResponse);
+    it('correctly parses empty response', async () => {
+      fetchStub = stubFetch(emptyResponse)
 
       const result = await fetchEngagementOpportunities(serverConfigMock)({
         limit: 0,
         offset: 0,
         location: Munich,
-      });
+      })
 
-      assertEquals(result, { totalResults: 0, data: [] });
-    });
+      assertEquals(result, { totalResults: 0, data: [] })
+    })
 
-    it("correctly parses engagement list", async () => {
-      fetchStub = stubFetch(validEngagementsResponse);
+    it('correctly parses engagement list', async () => {
+      fetchStub = stubFetch(validEngagementsResponse)
 
-      const graphQLServer = createGraphQLServer(noCacheServerConfig, fakeVolunteeringDB);
+      const graphQLServer = createGraphQLServer(noCacheServerConfig, fakeVolunteeringDB)
 
-      const result = await queryEngagementOpportunities(graphQLServer);
+      const result = await queryEngagementOpportunities(graphQLServer)
 
-      assertEquals(result, engagementsResponse);
-    });
+      assertEquals(result, engagementsResponse)
+    })
 
-    it("throws error for invalid engagements response", async () => {
+    it('throws error for invalid engagements response', async () => {
       fetchStub = stub(
         globalThis,
-        "fetch",
-        returnsNext([Promise.resolve(new Response("foobar"))]),
-      );
+        'fetch',
+        returnsNext([Promise.resolve(new Response('foobar'))]),
+      )
 
       await assertRejects(() =>
         fetchEngagementOpportunities(serverConfigMock)({
@@ -251,29 +251,29 @@ describe("voltastics", () => {
           offset: 0,
           location: Munich,
         })
-      );
-    });
-  });
+      )
+    })
+  })
 
-  describe("querying categories", () => {
-    it("correctly parses category list", async () => {
-      fetchStub = stubFetch(apiCategoriesResponse);
+  describe('querying categories', () => {
+    it('correctly parses category list', async () => {
+      fetchStub = stubFetch(apiCategoriesResponse)
 
-      const graphQLServer = createGraphQLServer(noCacheServerConfig, fakeVolunteeringDB);
+      const graphQLServer = createGraphQLServer(noCacheServerConfig, fakeVolunteeringDB)
 
-      const result = await queryCategories(graphQLServer);
+      const result = await queryCategories(graphQLServer)
 
-      assertEquals(result, categories);
-    });
+      assertEquals(result, categories)
+    })
 
-    it("throws error for invalid categories response", async () => {
+    it('throws error for invalid categories response', async () => {
       fetchStub = stub(
         globalThis,
-        "fetch",
-        returnsNext([Promise.resolve(new Response("foobar"))]),
-      );
+        'fetch',
+        returnsNext([Promise.resolve(new Response('foobar'))]),
+      )
 
-      await assertRejects(() => fetchCategories(voltasticsConfigMock));
-    });
-  });
-});
+      await assertRejects(() => fetchCategories(voltasticsConfigMock))
+    })
+  })
+})
