@@ -12,6 +12,7 @@ import {
   FilteredEngagementsParameters,
   GeolocationCoordinates,
   GeolocationGeometry,
+  SimilarRecommendationsParameters,
 } from './types.ts'
 import { isNonEmptyString, safeJsonParse } from './utils.ts'
 import { logger } from './logging.ts'
@@ -43,6 +44,12 @@ export type VolunteeringDBRow = {
   cosine_similarity: number
   distance_in_meters: number
   total_results: number
+}
+
+export type SimilarEmbeddingRow = {
+  longitude?: number
+  latitude?: number
+  embedding_array: string // JSON containing `number[], i.e. embedding`
 }
 
 const TOPICS_VECTOR_INDICES = new Map<string, number>([
@@ -317,6 +324,7 @@ export interface VolunteeringDB {
   engagementRecommendations(params: EngagementRecosParameters): Promise<EngagementsResponse>
   engagementRecos(params: EngagementRecosParameters): Promise<EngagementRecosResponse>
   filteredEngagements(params: FilteredEngagementsParameters): Promise<EngagementsResponse>
+  similarRecommendations(params: SimilarRecommendationsParameters): Promise<EngagementsResponse>
 }
 
 export class PostgresVolunteeringDB implements VolunteeringDB {
@@ -515,24 +523,24 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         // - In order to calculate a distance in meters, a geometry needs to be projected by transforming using
         //   ST_Transform(geom, 3857) where we use the SRID 3857 for Pseudo-Mercator
         return await this.client.queryObject<VolunteeringDBRow>`
-      WITH calculations AS (
-        SELECT *,
-              1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
-              ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
-        FROM volunteering_voltastics_with_classification
-        WHERE longitude IS NOT NULL AND latitude IS NOT NULL
-      ), scored AS (
-        SELECT *,
-              (${rankingWeightCosineSimilarity} * cosine_similarity) + 
-              (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxDistanceInMeters})) / ${maxDistanceInMeters}) AS weighted_score
-        FROM calculations
-      )
-      SELECT *, count(*) OVER() AS total_results
-      FROM scored
-      ORDER BY weighted_score DESC
-      OFFSET ${offset}
-      LIMIT ${limit};
-    `
+          WITH calculations AS (
+            SELECT *,
+                  1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
+                  ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
+            FROM volunteering_voltastics_with_classification
+            WHERE longitude IS NOT NULL AND latitude IS NOT NULL
+          ), scored AS (
+            SELECT *,
+                  (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+                  (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxDistanceInMeters})) / ${maxDistanceInMeters}) AS weighted_score
+            FROM calculations
+          )
+          SELECT *, count(*) OVER() AS total_results
+          FROM scored
+          ORDER BY weighted_score DESC
+          OFFSET ${offset}
+          LIMIT ${limit};
+        `
       },
     )
   }
@@ -550,14 +558,14 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         )
         const { lat, lon } = geolocationCoordinates
         return await this.client.queryObject<VolunteeringDBRow>`
-      SELECT *,
-             count(*) OVER() AS total_results,
-             ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
-      FROM volunteering_voltastics_with_classification
-      ORDER BY distance_in_meters ASC
-      OFFSET ${offset}
-      LIMIT ${limit};
-    `
+          SELECT *,
+                 count(*) OVER() AS total_results,
+                 ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
+          FROM volunteering_voltastics_with_classification
+          ORDER BY distance_in_meters ASC
+          OFFSET ${offset}
+          LIMIT ${limit};
+        `
       },
     )
   }
@@ -589,6 +597,125 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
       limit > MAX_LIMIT || limit < 1 ? DEFAULT_LIMIT : limit,
       geometry,
     )
+  }
+
+  // Method to find similar recommendations based on ID
+  async similarRecommendations(
+    params: SimilarRecommendationsParameters,
+  ): Promise<EngagementsResponse> {
+    return await Sentry.startSpan(
+      { name: 'VolunteeringDB.similarRecommendations' },
+      async () => {
+        const recos = await this.querySimilarRecommendations(
+          params.id,
+          params.offset < 0 ? 0 : params.offset,
+          params.limit > MAX_LIMIT || params.limit < 1 ? DEFAULT_LIMIT : params.limit,
+        ).catch((reason) => {
+          console.error('Error executing query', reason)
+          throw reason
+        })
+        return Promise.resolve({
+          totalResults: recos.length,
+          data: recos,
+        })
+      },
+    )
+  }
+
+  // Query similar recommendations based on embeddings and location
+  private async querySimilarRecommendations(
+    id: string,
+    offset: number,
+    limit: number,
+  ): Promise<Engagement[]> {
+    logger.debug(
+      `querySimilarRecommendations ${JSON.stringify({ id, offset, limit })}`,
+    )
+
+    const result = await Sentry.startSpan(
+      { name: 'VolunteeringDB.querySimilarRecommendations.queryVolunteeringOpportunityById', op: 'db.query' },
+      () => {
+        return this.client.queryObject<SimilarEmbeddingRow>`
+          SELECT latitude, longitude, e.embedding_array
+          FROM volunteering_voltastics_similar_embeddings e
+          JOIN volunteering_voltastics_with_classification v
+          ON e.id = v.id
+          WHERE e.id = ${id}
+        `
+      },
+    )
+
+    if (!result.rows.length) {
+      logger.warn(`No similarity recommendations found for ID ${id}`)
+      return Promise.resolve([])
+    }
+
+    const row = result.rows[0]
+    const lat = row.latitude ?? null
+    const lon = row.longitude ?? null
+    const embedding = JSON.parse(row.embedding_array) as number[]
+    const queryVectorString = JSON.stringify(embedding)
+
+    const rankingWeightCosineSimilarity = 0.7
+    const rankingWeightDistance = 0.3
+    const maxAcceptableDistanceInMeters = 50000
+
+    if (lat == null || lon == null) {
+      logger.debug(
+        `querySimilarRecommendations.queryRecosWithoutLatLon ${JSON.stringify({ id, offset, limit })}`,
+      )
+      const recosResult = await Sentry.startSpan({
+        name: 'VolunteeringDB.querySimilarRecommendations.queryRecosWithoutLatLon',
+        op: 'db.query',
+      }, () => {
+        return this.client.queryObject<VolunteeringDBRow>`
+          WITH similarity_calculations AS (
+            SELECT v.*,
+                   1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity
+            FROM volunteering_voltastics_similar_embeddings e
+            JOIN volunteering_voltastics_with_classification v
+            ON e.id = v.id
+            WHERE e.id != ${id}
+          )
+          SELECT *
+          FROM similarity_calculations
+          ORDER BY cosine_similarity DESC
+          OFFSET ${offset} LIMIT ${limit};
+        `
+      })
+      return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row))
+    } else {
+      logger.debug(
+        `querySimilarRecommendations.queryRecosWithLatLon ${JSON.stringify({ id, offset, limit })}`,
+      )
+      const recosResult = await Sentry.startSpan({
+        name: 'VolunteeringDB.querySimilarRecommendations.queryRecosWithLatLon',
+        op: 'db.query',
+      }, () => {
+        return this.client.queryObject<VolunteeringDBRow>`
+          WITH similarity_calculations AS (
+            SELECT v.*,
+                   1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity,
+                   ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326), 3857) AS distance_in_meters
+            FROM volunteering_voltastics_similar_embeddings e
+            JOIN volunteering_voltastics_with_classification v
+            ON e.id = v.id
+            WHERE e.id != ${id}
+          ), scored_recommendations AS (
+            SELECT *,
+                   (${rankingWeightCosineSimilarity} * cosine_similarity) + 
+                   (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxAcceptableDistanceInMeters}) / ${maxAcceptableDistanceInMeters})) AS weighted_score
+            FROM similarity_calculations
+          )
+          SELECT *
+          FROM scored_recommendations
+          ORDER BY weighted_score DESC
+          OFFSET ${offset}
+          LIMIT ${limit};
+        `
+      })
+      return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row))
+    }
   }
 
   private async queryFilteredEngagements(

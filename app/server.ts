@@ -7,6 +7,7 @@ import {
   EngagementResponse,
   EngagementsResponse,
   FilteredEngagementsParameters,
+  SimilarRecommendationsParameters,
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
 } from './types.ts'
@@ -135,6 +136,8 @@ const typeDefs = `
         categories: CategoriesResponse! @deprecated(reason: "Not in use anymore since the introduction of the engagementRecos query (since v1.34)")
         
         filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
+
+        similarRecommendations(offset: Int! = 0, limit: Int! = 10, id: String!): EngagementsResponse!
     }
 
     type Mutation {
@@ -187,6 +190,14 @@ const createResolvers = (
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
         : Sentry.startNewTrace(() => volunteeringDB.engagementRecos(parameters)),
+    similarRecommendations: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: SimilarRecommendationsParameters,
+    ): Promise<EngagementsResponse> =>
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : Sentry.startNewTrace(() => volunteeringDB.similarRecommendations(parameters)),
   },
   Mutation: {
     trackEngagementView: (
@@ -224,6 +235,7 @@ export const createGraphQLServer = (config: ServerConfig, volunteeringDB: Volunt
           'Query.filteredEngagements': config.cacheTtlMsDB,
           'Query.engagementRecommendations': config.cacheTtlMsDB,
           'Query.engagementRecos': config.cacheTtlMsDB,
+          'Query.similarRecommendations': config.cacheTtlMsDB,
         },
       }),
     ]

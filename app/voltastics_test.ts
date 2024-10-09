@@ -19,6 +19,7 @@ import {
   EngagementResponse,
   EngagementsResponse,
   FilteredEngagementsParameters,
+  SimilarRecommendationsParameters,
 } from './types.ts'
 import { createGraphQLServer, GraphQLServer } from './server.ts'
 
@@ -162,6 +163,9 @@ const fakeVolunteeringDB = new (class implements VolunteeringDB {
     return Promise.reject(new Error('should not have been called'))
   }
   filteredEngagements(_params: FilteredEngagementsParameters): Promise<EngagementsResponse> {
+    return Promise.reject(new Error('should not have been called'))
+  }
+  similarRecommendations(_params: SimilarRecommendationsParameters): Promise<EngagementsResponse> {
     return Promise.reject(new Error('should not have been called'))
   }
 })()
