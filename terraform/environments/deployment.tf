@@ -59,7 +59,7 @@ resource "google_cloud_run_service" "volunteering_api" {
             path = "/liveness"
           }
           timeout_seconds = 10
-          period_seconds = 60
+          period_seconds  = 60
         }
         env {
           name  = "ENVIRONMENT"
