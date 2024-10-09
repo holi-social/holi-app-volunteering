@@ -9,7 +9,7 @@ import {
   FilteredEngagementsParameters,
   TrackEngagementViewParameters,
   TrackEngagementViewResponse,
-} from "./types.ts";
+} from './types.ts'
 import {
   Client,
   createSchema,
@@ -19,12 +19,12 @@ import {
   GraphQLError,
   Sentry,
   useResponseCache,
-} from "./deps.ts";
-import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from "./voltastics.ts";
-import { logger } from "./logging.ts";
-import { PostgresVolunteeringDB, VolunteeringDB } from "./volunteering_db.ts";
-import { GeoAPIClientImpl } from "./geo_api_client.ts";
-import { ServerConfig } from "./config.ts";
+} from './deps.ts'
+import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from './voltastics.ts'
+import { logger } from './logging.ts'
+import { PostgresVolunteeringDB, VolunteeringDB } from './volunteering_db.ts'
+import { GeoAPIClientImpl } from './geo_api_client.ts'
+import { ServerConfig } from './config.ts'
 
 const typeDefs = `
     type Organizer {
@@ -140,7 +140,7 @@ const typeDefs = `
     type Mutation {
         trackEngagementView(id: String!): TrackEngagementViewResponse!
     }
-`;
+`
 
 const createResolvers = (
   config: ServerConfig,
@@ -196,19 +196,19 @@ const createResolvers = (
     ): Promise<TrackEngagementViewResponse> =>
       config.fake ? Promise.resolve({ id: parameters.id }) : trackEngagementView(config.voltastics)(parameters),
   },
-});
+})
 
 export class BadRequestError extends GraphQLError {
   constructor(message: string) {
     super(message, {
       extensions: {
-        code: "BAD_REQUEST",
+        code: 'BAD_REQUEST',
       },
-    });
+    })
   }
   static isBadRequest(error: Error): boolean {
     // deno-lint-ignore no-explicit-any
-    return error.name === "GraphQLError" && ((error as GraphQLError).extensions as any).code === "BAD_REQUEST";
+    return error.name === 'GraphQLError' && ((error as GraphQLError).extensions as any).code === 'BAD_REQUEST'
   }
 }
 
@@ -218,44 +218,44 @@ export const createGraphQLServer = (config: ServerConfig, volunteeringDB: Volunt
       useResponseCache({
         session: () => null, // global cache, shared by all users
         ttlPerSchemaCoordinate: {
-          "Query.engagementOpportunities": config.cacheTtlMsVoltastics,
-          "Query.engagement": config.cacheTtlMsVoltastics,
-          "Query.categories": config.cacheTtlMsVoltastics,
-          "Query.filteredEngagements": config.cacheTtlMsDB,
-          "Query.engagementRecommendations": config.cacheTtlMsDB,
-          "Query.engagementRecos": config.cacheTtlMsDB,
+          'Query.engagementOpportunities': config.cacheTtlMsVoltastics,
+          'Query.engagement': config.cacheTtlMsVoltastics,
+          'Query.categories': config.cacheTtlMsVoltastics,
+          'Query.filteredEngagements': config.cacheTtlMsDB,
+          'Query.engagementRecommendations': config.cacheTtlMsDB,
+          'Query.engagementRecos': config.cacheTtlMsDB,
         },
       }),
     ]
-    : [];
-  const resolvers = createResolvers(config, volunteeringDB);
+    : []
+  const resolvers = createResolvers(config, volunteeringDB)
   return createYoga({
     schema: createSchema({ resolvers, typeDefs }),
     graphiql: true,
     plugins,
-  });
-};
+  })
+}
 
 // deno-lint-ignore no-explicit-any
-export type GraphQLServer = any;
+export type GraphQLServer = any
 
 const isDbConnectionAlive = async (client: Client): Promise<Response> => {
-  const timeout = 10_000;
+  const timeout = 10_000
   try {
-    const resultP = client.queryObject<{ db_connection_is_alive: boolean }>`SELECT true as db_connection_is_alive`;
-    const result = await deadline(resultP, timeout);
-    const alive = result.rowCount && result.rowCount > 0 && result.rows[0].db_connection_is_alive || false;
-    return new Response(`${alive}`);
+    const resultP = client.queryObject<{ db_connection_is_alive: boolean }>`SELECT true as db_connection_is_alive`
+    const result = await deadline(resultP, timeout)
+    const alive = result.rowCount && result.rowCount > 0 && result.rows[0].db_connection_is_alive || false
+    return new Response(`${alive}`)
   } catch (e) {
     if (e instanceof DeadlineError) {
-      console.error(`Liveness check timed out after ${timeout} ms`);
-      return new Response(null, { status: 503 });
+      console.error(`Liveness check timed out after ${timeout} ms`)
+      return new Response(null, { status: 503 })
     } else {
-      console.error("Liveness check failed, reason: ", e);
-      return new Response(null, { status: 500 });
+      console.error('Liveness check failed, reason: ', e)
+      return new Response(null, { status: 500 })
     }
   }
-};
+}
 
 export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr> => {
   const client = new Client({
@@ -275,31 +275,31 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
     connection: {
       attempts: config.volunteeringDB.connectionAttempts,
     },
-  });
-  const geoAPIClient = new GeoAPIClientImpl(config.geoAPIEndpointUrl);
+  })
+  const geoAPIClient = new GeoAPIClientImpl(config.geoAPIEndpointUrl)
   const volunteeringDB = new PostgresVolunteeringDB(
     client,
     config.imageProxyBaseUrl,
     geoAPIClient,
-  );
-  const graphQLServer: GraphQLServer = createGraphQLServer(config, volunteeringDB);
+  )
+  const graphQLServer: GraphQLServer = createGraphQLServer(config, volunteeringDB)
   return Deno.serve({
     port: config.port,
-    hostname: "0.0.0.0",
+    hostname: '0.0.0.0',
     handler: (req: Request) => {
-      const url = new URL(req.url);
-      if (url.pathname.startsWith("/liveness")) return isDbConnectionAlive(client);
-      else return graphQLServer.handleRequest(req);
+      const url = new URL(req.url)
+      if (url.pathname.startsWith('/liveness')) return isDbConnectionAlive(client)
+      else return graphQLServer.handleRequest(req)
     },
     onListen({ port, hostname }) {
       logger.info(
-        `Server started at http://${hostname === "0.0.0.0" ? "localhost" : hostname}:${port}/graphql`,
-      );
+        `Server started at http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${port}/graphql`,
+      )
       if (config.fake) {
         logger.info(
           `Server is serving fake data due to FAKE env var set to true`,
-        );
+        )
       }
     },
-  });
-};
+  })
+}
