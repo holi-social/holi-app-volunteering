@@ -1,14 +1,14 @@
 // Google Cloud LogSeverity levels https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#logseverity
 export enum LogSeverity {
-  DEFAULT = "DEFAULT",
-  DEBUG = "DEBUG",
-  INFO = "INFO",
-  NOTICE = "NOTICE",
-  WARNING = "WARNING",
-  ERROR = "ERROR",
-  CRITICAL = "CRITICAL",
-  ALERT = "ALERT",
-  EMERGENCY = "EMERGENCY",
+  DEFAULT = 'DEFAULT',
+  DEBUG = 'DEBUG',
+  INFO = 'INFO',
+  NOTICE = 'NOTICE',
+  WARNING = 'WARNING',
+  ERROR = 'ERROR',
+  CRITICAL = 'CRITICAL',
+  ALERT = 'ALERT',
+  EMERGENCY = 'EMERGENCY',
 }
 
 const sortedLevels = [
@@ -21,20 +21,20 @@ const sortedLevels = [
   LogSeverity.CRITICAL,
   LogSeverity.ALERT,
   LogSeverity.EMERGENCY,
-];
+]
 
 /**
  * The Logger class requires a setUpLogger method to be run during the app's initialization in order get the current environment.
  */
 class Logger {
-  environment = "development";
+  environment = 'development'
 
   // minimum level to log
-  level = LogSeverity.DEFAULT;
+  level = LogSeverity.DEFAULT
 
   setUpLogger(environment: string, level: LogSeverity) {
-    this.environment = environment;
-    this.level = level;
+    this.environment = environment
+    this.level = level
   }
 
   /**
@@ -46,52 +46,52 @@ class Logger {
    * In other environments it should follow Google Cloud's Structured Logging formatting: https://cloud.google.com/logging/docs/structured-logging
    */
   log(severity: LogSeverity, message: string, options = {}) {
-    if (!shouldLogLevel(this.level, severity)) return;
+    if (!shouldLogLevel(this.level, severity)) return
 
-    const date = new Date().toISOString();
-    const input = this.environment === "development" ? `${date} ${severity} ${message}` : JSON.stringify({
+    const date = new Date().toISOString()
+    const input = this.environment === 'development' ? `${date} ${severity} ${message}` : JSON.stringify({
       environment: this.environment,
       severity,
       message,
       ...options,
-    });
+    })
 
     switch (severity) {
       case LogSeverity.DEFAULT:
-        console.log(input);
-        break;
+        console.log(input)
+        break
       case LogSeverity.DEBUG:
-        console.debug(input);
-        break;
+        console.debug(input)
+        break
       case LogSeverity.INFO:
       case LogSeverity.NOTICE:
-        console.info(input);
-        break;
+        console.info(input)
+        break
       case LogSeverity.WARNING:
-        console.warn(input);
-        break;
+        console.warn(input)
+        break
       case LogSeverity.ERROR:
       case LogSeverity.CRITICAL:
       case LogSeverity.ALERT:
       case LogSeverity.EMERGENCY:
-        console.error(input);
+        console.error(input)
     }
   }
 
   debug(message: string, options = {}) {
-    this.log(LogSeverity.DEBUG, message, options);
+    this.log(LogSeverity.DEBUG, message, options)
   }
 
   info(message: string, options = {}) {
-    this.log(LogSeverity.INFO, message, options);
+    this.log(LogSeverity.INFO, message, options)
   }
 
   warn(message: string, options = {}) {
-    this.log(LogSeverity.WARNING, message, options);
+    this.log(LogSeverity.WARNING, message, options)
   }
 
   error(message: string, options = {}) {
-    this.log(LogSeverity.ERROR, message, options);
+    this.log(LogSeverity.ERROR, message, options)
   }
 }
 
@@ -101,9 +101,9 @@ class Logger {
  * @returns Boolean, true if the current level is accepted and false if it is rejected by the minLevel
  */
 const shouldLogLevel = (minLevel: LogSeverity, level: LogSeverity) => {
-  const minLevelIndex = sortedLevels.indexOf(minLevel);
-  const currentLevelIndex = sortedLevels.indexOf(level);
-  return currentLevelIndex >= minLevelIndex;
-};
+  const minLevelIndex = sortedLevels.indexOf(minLevel)
+  const currentLevelIndex = sortedLevels.indexOf(level)
+  return currentLevelIndex >= minLevelIndex
+}
 
-export const logger = new Logger();
+export const logger = new Logger()

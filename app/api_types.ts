@@ -1,38 +1,38 @@
 export type ApiSearchEngagement = {
-  id: number;
-  title: string;
-  description: string;
-  link: string;
-  image?: string;
-  source: string;
-  uses: string[];
-  hashTags: string[];
-  orga?: string;
-  imageOrga?: string;
-  location?: string;
-  latitude?: number | null;
-  longitude?: number | null;
-};
+  id: number
+  title: string
+  description: string
+  link: string
+  image?: string
+  source: string
+  uses: string[]
+  hashTags: string[]
+  orga?: string
+  imageOrga?: string
+  location?: string
+  latitude?: number | null
+  longitude?: number | null
+}
 
 export type ApiSearchEngagementsResponse =
   | {
-    totalEntries: number;
-    limit: number;
-    offset: number;
-    entries: ApiSearchEngagement[];
+    totalEntries: number
+    limit: number
+    offset: number
+    entries: ApiSearchEngagement[]
   }
-  | { success: boolean };
+  | { success: boolean }
 
-export type ApiCategoriesResponse = string[];
+export type ApiCategoriesResponse = string[]
 
 export enum ApiRoutes {
-  SEARCH_ENGAGEMENTS = "searchengagement",
-  TRACK_VIEW = "trackview",
-  USES = "uses",
+  SEARCH_ENGAGEMENTS = 'searchengagement',
+  TRACK_VIEW = 'trackview',
+  USES = 'uses',
 }
 
 export enum ApiDefaults {
-  CITY = "ALL_CITIES",
+  CITY = 'ALL_CITIES',
   MIN_RADIUS = 5,
   MAX_RADIUS = 50, // The largest radius in kilometers that the Voltastics API is capable of handling.
 }

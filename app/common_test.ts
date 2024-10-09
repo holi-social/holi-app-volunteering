@@ -1,42 +1,42 @@
-import { returnsNext, stub } from "./dev_deps.ts";
-import { GraphQLServer } from "./server.ts";
+import { returnsNext, stub } from './dev_deps.ts'
+import { GraphQLServer } from './server.ts'
 
-export type ResponsePayload = Record<string, unknown> | Array<unknown> | Error;
+export type ResponsePayload = Record<string, unknown> | Array<unknown> | Error
 
 export const stubFetchWithResponses = (responses: ResponsePayload[]) => {
   return stub(
     globalThis,
-    "fetch",
+    'fetch',
     returnsNext(
       responses.map((response) => Promise.resolve(new Response(JSON.stringify(response)))),
     ),
-  );
-};
+  )
+}
 
 export const stubFetch = (response: ResponsePayload) => {
-  return stubFetchWithResponses([response]);
-};
+  return stubFetchWithResponses([response])
+}
 
 export const processGqlRequest = (
   graphQLServer: GraphQLServer,
   query: string,
   variables: Record<string, unknown> = {},
 ): Promise<Record<string, unknown> | undefined | null> => {
-  const request = new Request("http://localhost:8004/graphql", {
-    method: "POST",
+  const request = new Request('http://localhost:8004/graphql', {
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
-      "accept": "*/*",
+      'content-type': 'application/json',
+      'accept': '*/*',
     },
     body: JSON.stringify({
       operationName: null,
       variables: variables,
       query: query,
     }),
-  });
+  })
   return graphQLServer.handleRequest(request)
     // deno-lint-ignore no-explicit-any
     .then((response: any) => response.json())
     // deno-lint-ignore no-explicit-any
-    .then((response: any) => response.data);
-};
+    .then((response: any) => response.data)
+}
