@@ -324,7 +324,7 @@ export interface VolunteeringDB {
   engagementRecommendations(params: EngagementRecosParameters): Promise<EngagementsResponse>;
   engagementRecos(params: EngagementRecosParameters): Promise<EngagementRecosResponse>;
   filteredEngagements(params: FilteredEngagementsParameters): Promise<EngagementsResponse>;
-  findSimilarRecommendations(params: SimilarRecommendationsParameters): Promise<EngagementsResponse>;
+  similarRecommendations(params: SimilarRecommendationsParameters): Promise<EngagementsResponse>;
 }
 
 export class PostgresVolunteeringDB implements VolunteeringDB {
@@ -604,7 +604,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
   }
 
   // Method to find similar recommendations based on ID
-  async findSimilarRecommendations(
+  async similarRecommendations(
     params: SimilarRecommendationsParameters,
   ): Promise<EngagementsResponse> {
     const recos = await this.querySimilarRecommendations(

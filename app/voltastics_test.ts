@@ -165,7 +165,7 @@ const fakeVolunteeringDB = new (class implements VolunteeringDB {
   filteredEngagements(_params: FilteredEngagementsParameters): Promise<EngagementsResponse> {
     return Promise.reject(new Error("should not have been called"));
   }
-  findSimilarRecommendations(_params: SimilarRecommendationsParameters): Promise<EngagementsResponse> {
+  similarRecommendations(_params: SimilarRecommendationsParameters): Promise<EngagementsResponse> {
     return Promise.reject(new Error("should not have been called"));
   }
 })();

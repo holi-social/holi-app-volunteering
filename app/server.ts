@@ -195,9 +195,7 @@ const createResolvers = (
       _parent: any,
       parameters: SimilarRecommendationsParameters,
     ): Promise<EngagementsResponse> =>
-      config.fake
-        ? Promise.resolve({ totalResults: 0, data: [] })
-        : volunteeringDB.findSimilarRecommendations(parameters),
+      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : volunteeringDB.similarRecommendations(parameters),
   },
   Mutation: {
     trackEngagementView: (
