@@ -34,13 +34,6 @@ variables:
   resource_group: $ENVIRONMENT_ID # never execute terraform in parallel on the same environment
   interruptible: false
 
-.e2e:
-  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/archlinux:latest'
-  script:
-    - API_DOMAIN=`cat $API_DOMAIN_PATH`
-    - echo "e2e tests against $CI_ENVIRONMENT_SLUG environment go here and against $API_DOMAIN"
-    - terraform/environments/scripts/wait-for-ssl.sh "https://${API_DOMAIN}"
-
 .smoketest:
   image: 'europe-north1-docker.pkg.dev/holi-shared/docker/holi-docker/holi-k6-builder'
   script:
@@ -114,14 +107,6 @@ review_smoketest:
     - production
     - /^noenv\/.*/
 
-review_e2e:
-  extends: .e2e
-  needs: ['review_deploy']
-  except:
-    - main
-    - production
-    - /^noenv\/.*/
-
 review_destroy:
   needs: ['review_deploy']
   image:
@@ -183,14 +168,6 @@ staging_trigger_unified-api_redeployment:
   trigger:
     project: 'app/holi-unified-api'
     branch: 'main'
-  only:
-    - main
-
-staging_e2e:
-  extends: .e2e
-  # if staging_e2e would actually run tests (other than ensuring SSL works), we'd have to
-  # wait for the unified-api pipeline to finish.
-  needs: ['staging_deploy']
   only:
     - main
 
