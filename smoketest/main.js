@@ -27,14 +27,14 @@ function forQuery(query, checkFunction) {
 
 // Define your smoketest(s) here.
 export default () => {
-  forQuery(`{__schema{description}}`, (response) => {
+  forQuery(`{appVolunteering_categories{data{name}}}`, (response) => {
     check(response, {
       'is status 200': (r) => r.status === 200,
     })
     check(JSON.parse(response.body), {
       // there can be multiple tests here, e.g.
       //"contains topics object": (r) => typeof r.data.topics != null,
-      'contains schema description': (r) => '__schema' in r.data && 'description' in r.data.__schema,
+      'contains categories': (r) => Array.isArray(r.data.appVolunteering_categories.data) && r.data.appVolunteering_categories.data.length > 0,
     })
   })
 }
