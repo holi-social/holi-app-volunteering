@@ -1,5 +1,5 @@
 import http from 'k6/http'
-import { check, sleep } from 'k6'
+import { check } from 'k6'
 
 // You don't need to change anything in this section, it's k6 glue code.
 // See the default function at the end of the file for defining your smoketest.
@@ -34,7 +34,8 @@ export default () => {
     check(JSON.parse(response.body), {
       // there can be multiple tests here, e.g.
       //"contains topics object": (r) => typeof r.data.topics != null,
-      'contains categories': (r) => Array.isArray(r.data.appVolunteering_categories.data) && r.data.appVolunteering_categories.data.length > 0,
+      'contains categories': (r) =>
+        Array.isArray(r.data.appVolunteering_categories.data) && r.data.appVolunteering_categories.data.length > 0,
     })
   })
 }
