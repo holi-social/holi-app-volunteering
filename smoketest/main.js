@@ -35,7 +35,9 @@ export default () => {
       // there can be multiple tests here, e.g.
       //"contains topics object": (r) => typeof r.data.topics != null,
       'contains categories': (r) =>
-        Array.isArray(r.data.appVolunteering_categories.data) && r.data.appVolunteering_categories.data.length > 0,
+        Array.isArray(r.data.categories.data) && r.data.categories.data.length > 0,
     })
   })
 }
+
+// curl -v -X POST https://review-holi-10323-5koud8.volunteering.apis.holi.social/graphql -H "Content-Type: application/json" -d '{"query":"{categories{data{name}}}"}'
