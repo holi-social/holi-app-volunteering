@@ -52,10 +52,10 @@ cache_lint_test:
   image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:2.0.0'
   stage: 'test'
   script:
-    - deno cache --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
+    - deno cache --allow-import --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
     - deno fmt --check
     - deno lint
-    - deno test
+    - deno test --allow-import 
 
 # You can override the included template(s) by including variable overrides
 # SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
