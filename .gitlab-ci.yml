@@ -55,7 +55,7 @@ cache_lint_test:
     - deno cache --allow-import --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
     - deno fmt --check
     - deno lint
-    - deno test --allow-import 
+    - deno test --allow-import
 
 # You can override the included template(s) by including variable overrides
 # SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
@@ -164,7 +164,7 @@ staging_smoketest:
     - main
 
 staging_trigger_unified-api_redeployment:
-  needs: ['staging_deploy']
+  needs: ['staging_smoketest']
   trigger:
     project: 'app/holi-unified-api'
     branch: 'main'
@@ -193,7 +193,7 @@ production_smoketest:
     - production
 
 production_trigger_unified-api_redeployment:
-  needs: ['production_deploy']
+  needs: ['production_smoketest']
   trigger:
     project: 'app/holi-unified-api'
     branch: 'production'
