@@ -1,7 +1,7 @@
 repos:
--   repo: local
+  - repo: local
     hooks:
-    -   id: gitleaks
+      - id: gitleaks
         name: gitleaks
         language: system
         entry: gitleaks protect --staged -v -c ../.gitleaks.toml

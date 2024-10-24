@@ -1,4 +1,4 @@
-FROM europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:alpine-1.45.2
+FROM europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:2.0.0
 
 # The port that your application listens to.
 EXPOSE 8004
@@ -10,7 +10,7 @@ COPY deno.lock .
 COPY deno.json .
 COPY ./app ./app
 
-RUN deno cache --lock=deno.lock app/deps.ts app/dev_deps.ts
-RUN deno cache --lock=deno.lock app/main.ts
+RUN deno cache --allow-import --lock=deno.lock app/deps.ts app/dev_deps.ts
+RUN deno cache --allow-import --lock=deno.lock app/main.ts
 
-CMD ["deno", "run", "--allow-net", "--allow-env", "--lock=deno.lock", "--cached-only", "app/main.ts"]
+CMD ["deno", "run", "--allow-import", "--allow-net", "--allow-env", "--lock=deno.lock", "--cached-only", "app/main.ts"]
