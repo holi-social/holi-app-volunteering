@@ -269,8 +269,8 @@ const isDbConnectionAlive = async (client: Client): Promise<Response> => {
   }
 }
 
-export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr> => {
-  const client = new Client({
+export const createPostgresClient = (config: ServerConfig): Client => {
+  return new Client({
     hostname: config.volunteeringDB.hostname,
     port: config.volunteeringDB.port,
     database: config.volunteeringDB.database,
@@ -288,6 +288,9 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
       attempts: config.volunteeringDB.connectionAttempts,
     },
   })
+}
+
+export const startServer = (config: ServerConfig, client: Client): Deno.HttpServer<Deno.NetAddr> => {
   const geoAPIClient = new GeoAPIClientImpl(config.geoAPIEndpointUrl)
   const volunteeringDB = new PostgresVolunteeringDB(
     client,
@@ -295,7 +298,7 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
     geoAPIClient,
   )
   const graphQLServer: GraphQLServer = createGraphQLServer(config, volunteeringDB)
-  const server = Deno.serve({
+  return Deno.serve({
     port: config.port,
     hostname: '0.0.0.0',
     handler: (req: Request) => {
@@ -314,31 +317,4 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
       }
     },
   })
-
-  for (const signal of ['SIGINT', 'SIGTERM'] as Deno.Signal[]) {
-    Deno.addSignalListener(signal, async () => {
-      const shutdownTimeout = new Promise((_resolve, _reject) => {
-        setTimeout(() => {
-          console.log('Shutdown timeout reached - forcing exit')
-          Deno.exit(1)
-        }, 5000)
-      })
-      const shutdown = async (): Promise<void> => {
-        logger.info(`Received signal ${signal}`)
-        logger.info('Shutting down server')
-        await server.shutdown()
-        await server.finished
-        logger.info('Shutting down Postgres client')
-        await client.end()
-        logger.info('Done shutting done. Bye :)')
-        Deno.exit()
-      }
-      await Promise.race([
-        shutdown(),
-        shutdownTimeout,
-      ])
-    })
-  }
-
-  return server
 }
