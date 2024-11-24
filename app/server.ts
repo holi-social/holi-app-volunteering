@@ -12,12 +12,12 @@ import {
   TrackEngagementViewResponse,
 } from './types.ts'
 import {
-  Client,
   createSchema,
   createYoga,
   deadline,
   DeadlineError,
   GraphQLError,
+  postgres,
   Sentry,
   useResponseCache,
 } from './deps.ts'
@@ -26,6 +26,7 @@ import { logger } from './logging.ts'
 import { PostgresVolunteeringDB, VolunteeringDB } from './volunteering_db.ts'
 import { GeoAPIClientImpl } from './geo_api_client.ts'
 import { ServerConfig } from './config.ts'
+import { Sql } from 'npm:postgres@3.4.5'
 
 const typeDefs = `
     type Organizer {
@@ -251,12 +252,12 @@ export const createGraphQLServer = (config: ServerConfig, volunteeringDB: Volunt
 // deno-lint-ignore no-explicit-any
 export type GraphQLServer = any
 
-const isDbConnectionAlive = async (client: Client): Promise<Response> => {
+const isDbConnectionAlive = async (client: Sql): Promise<Response> => {
   const timeout = 10_000
   try {
-    const resultP = client.queryObject<{ db_connection_is_alive: boolean }>`SELECT true as db_connection_is_alive`
+    const resultP = client<{ db_connection_is_alive: boolean }[]>`SELECT true as db_connection_is_alive`
     const result = await deadline(resultP, timeout)
-    const alive = result.rowCount && result.rowCount > 0 && result.rows[0].db_connection_is_alive || false
+    const alive = result.length > 0 && result[0].db_connection_is_alive || false
     return new Response(`${alive}`)
   } catch (e) {
     if (e instanceof DeadlineError) {
@@ -269,28 +270,26 @@ const isDbConnectionAlive = async (client: Client): Promise<Response> => {
   }
 }
 
-export const createPostgresClient = (config: ServerConfig): Client => {
-  return new Client({
-    hostname: config.volunteeringDB.hostname,
+export const createPostgresClient = (config: ServerConfig): postgres.Sql => {
+  return postgres('', {
+    host: config.volunteeringDB.hostname,
     port: config.volunteeringDB.port,
     database: config.volunteeringDB.database,
-    user: config.volunteeringDB.username,
+    username: config.volunteeringDB.username,
     password: config.volunteeringDB.password,
-    controls: {
-      debug: {
-        queries: false,
-        notices: false,
-        results: false,
-        queryInError: true,
-      },
+    debug: (connection, query, params, types) => {
+      logger.debug(JSON.stringify({ connection, query, params, types }))
     },
+    connect_timeout: 5,
+    idle_timeout: 60, // automatically close idle connections after 5 minutes to avoid ECONNRESET issue, see https://www.npmjs.com/package/postgres#connection-details
+    max_lifetime: 60 * 30, // close connections after 30 minutes in a controlled manner to avoid ECONNRESET issue
     connection: {
-      attempts: config.volunteeringDB.connectionAttempts,
+      application_name: 'volunteering-api-service',
     },
   })
 }
 
-export const startServer = (config: ServerConfig, client: Client): Deno.HttpServer<Deno.NetAddr> => {
+export const startServer = (config: ServerConfig, client: postgres.Sql): Deno.HttpServer<Deno.NetAddr> => {
   const geoAPIClient = new GeoAPIClientImpl(config.geoAPIEndpointUrl)
   const volunteeringDB = new PostgresVolunteeringDB(
     client,
