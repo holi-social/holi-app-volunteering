@@ -252,10 +252,10 @@ export const createGraphQLServer = (config: ServerConfig, volunteeringDB: Volunt
 // deno-lint-ignore no-explicit-any
 export type GraphQLServer = any
 
-const isDbConnectionAlive = async (client: Sql): Promise<Response> => {
+const isDbConnectionAlive = async (sql: Sql): Promise<Response> => {
   const timeout = 10_000
   try {
-    const resultP = client<{ db_connection_is_alive: boolean }[]>`SELECT true as db_connection_is_alive`
+    const resultP = sql<{ db_connection_is_alive: boolean }[]>`SELECT true as db_connection_is_alive`
     const result = await deadline(resultP, timeout)
     const alive = result.length > 0 && result[0].db_connection_is_alive || false
     return new Response(`${alive}`)
@@ -289,10 +289,10 @@ export const createPostgresClient = (config: ServerConfig): postgres.Sql => {
   })
 }
 
-export const startServer = (config: ServerConfig, client: postgres.Sql): Deno.HttpServer<Deno.NetAddr> => {
+export const startServer = (config: ServerConfig, sql: postgres.Sql): Deno.HttpServer<Deno.NetAddr> => {
   const geoAPIClient = new GeoAPIClientImpl(config.geoAPIEndpointUrl)
   const volunteeringDB = new PostgresVolunteeringDB(
-    client,
+    sql,
     config.imageProxyBaseUrl,
     geoAPIClient,
   )
@@ -302,7 +302,7 @@ export const startServer = (config: ServerConfig, client: postgres.Sql): Deno.Ht
     hostname: '0.0.0.0',
     handler: (req: Request) => {
       const url = new URL(req.url)
-      if (url.pathname.startsWith('/liveness')) return isDbConnectionAlive(client)
+      if (url.pathname.startsWith('/liveness')) return isDbConnectionAlive(sql)
       else return graphQLServer.handleRequest(req)
     },
     onListen({ port, hostname }) {

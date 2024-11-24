@@ -22,8 +22,8 @@ if (!sentryDSN) {
 }
 
 const config = serverConfigFromEnv()
-const client = createPostgresClient(config)
-const server = startServer(config, client)
+const sql = createPostgresClient(config)
+const server = startServer(config, sql)
 
 for (const signal of ['SIGINT', 'SIGTERM'] as Deno.Signal[]) {
   Deno.addSignalListener(signal, async () => {
@@ -39,7 +39,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as Deno.Signal[]) {
       await server.shutdown()
       await server.finished
       logger.info('Shutting down Postgres client')
-      await client.end()
+      await sql.end()
       logger.info('Done shutting done. Bye :)')
       Deno.exit()
     }

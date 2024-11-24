@@ -328,16 +328,16 @@ export interface VolunteeringDB {
 }
 
 export class PostgresVolunteeringDB implements VolunteeringDB {
-  private readonly client: postgres.Sql
+  private readonly sql: postgres.Sql
   private readonly imageProxyBaseUrl: string
   private geoAPIClient: GeoAPIClient
 
   constructor(
-    client: postgres.Sql,
+    sql: postgres.Sql,
     imageProxyBaseUrl: string,
     geoAPIClient: GeoAPIClient,
   ) {
-    this.client = client
+    this.sql = sql
     this.imageProxyBaseUrl = imageProxyBaseUrl
     this.geoAPIClient = geoAPIClient
   }
@@ -346,7 +346,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     return await Sentry.startSpan(
       { name: 'VolunteeringDB.engagement' },
       async () => {
-        const result = await this.client<VolunteeringDBRow[]>`
+        const result = await this.sql<VolunteeringDBRow[]>`
           SELECT * FROM volunteering_voltastics_with_classification
           WHERE id = ${id}`
         if (result.length < 1) {
@@ -483,7 +483,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           `queryRecosBasedOnTopicsAndSkills ${JSON.stringify({ offset, limit, topics, skills })}`,
         )
         const queryVector = JSON.stringify(queryEmbeddingVector(topics, skills))
-        return await this.client<VolunteeringDBRow[]>`
+        return await this.sql<VolunteeringDBRow[]>`
           SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity, count(*) OVER () as total_results
           FROM volunteering_voltastics_with_classification
           ORDER BY cosine_similarity DESC
@@ -520,7 +520,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         // - Database stores in GPS-Coordinates (SRID 4326)
         // - In order to calculate a distance in meters, a geometry needs to be projected by transforming using
         //   ST_Transform(geom, 3857) where we use the SRID 3857 for Pseudo-Mercator
-        return await this.client<VolunteeringDBRow[]>`
+        return await this.sql<VolunteeringDBRow[]>`
           WITH calculations AS (
             SELECT *,
                   1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
@@ -555,7 +555,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           `queryRecosBasedOnLocation ${JSON.stringify({ offset, limit, geolocationCoordinates })}`,
         )
         const { lat, lon } = geolocationCoordinates
-        return await this.client<VolunteeringDBRow[]>`
+        return await this.sql<VolunteeringDBRow[]>`
           SELECT *,
                  count(*) OVER() AS total_results,
                  ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
@@ -633,7 +633,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     const result = await Sentry.startSpan(
       { name: 'VolunteeringDB.querySimilarRecommendations.queryVolunteeringOpportunityById', op: 'db.query' },
       () => {
-        return this.client<SimilarEmbeddingRow[]>`
+        return this.sql<SimilarEmbeddingRow[]>`
           SELECT latitude, longitude, e.embedding_array
           FROM volunteering_voltastics_similar_embeddings e
           JOIN volunteering_voltastics_with_classification v
@@ -666,7 +666,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         name: 'VolunteeringDB.querySimilarRecommendations.queryRecosWithoutLatLon',
         op: 'db.query',
       }, () => {
-        return this.client<VolunteeringDBRow[]>`
+        return this.sql<VolunteeringDBRow[]>`
           WITH similarity_calculations AS (
             SELECT v.*,
                    1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity
@@ -690,7 +690,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         name: 'VolunteeringDB.querySimilarRecommendations.queryRecosWithLatLon',
         op: 'db.query',
       }, () => {
-        return this.client<VolunteeringDBRow[]>`
+        return this.sql<VolunteeringDBRow[]>`
           WITH similarity_calculations AS (
             SELECT v.*,
                    1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity,
@@ -738,7 +738,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         // - Unset bits in `binary_embedding` for terms that are not part of the query using bitwise AND => If at least one set bit remains, it matches the query (checked by comparing to empty bit string, as it's too long for integer conversion)
         // - Filter by geolocation by checking if coordinates are inside the given geolocation's GeoJSON geometry
         // - Sort results using cosine_similarity
-        const result: VolunteeringDBRow[] = await this.client<VolunteeringDBRow[]>`
+        const result: VolunteeringDBRow[] = await this.sql<VolunteeringDBRow[]>`
           WITH vector_matches AS (
             SELECT
               *,
