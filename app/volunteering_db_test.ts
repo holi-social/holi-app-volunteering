@@ -10,7 +10,7 @@ import {
   stub,
 } from './dev_deps.ts'
 import { exportedForTesting, PostgresVolunteeringDB, VolunteeringDB, VolunteeringDBRow } from './volunteering_db.ts'
-import { Client, GraphQLError } from './deps.ts'
+import { GraphQLError, postgres } from './deps.ts'
 import { GeoAPIClient } from './geo_api_client.ts'
 import { Engagement } from './types.ts'
 import { logger, LogSeverity } from './logging.ts'
@@ -49,9 +49,9 @@ const withMockedDependencies = (queryObjectResult: VolunteeringDBRow[] = []) =>
     geoApiClient: GeoAPIClient,
   ) => unknown | Promise<unknown>,
 ) => {
-  const mockClient = {
-    queryObject: () => Promise.resolve({ rows: queryObjectResult }),
-  } as unknown as Client
+  const mockClient = (() => Promise.resolve(queryObjectResult)) as unknown as postgres.Sql<
+    Record<string | number, never>
+  >
   const mockedGeoApiClient = {} as unknown as GeoAPIClient
   stub(
     mockedGeoApiClient,

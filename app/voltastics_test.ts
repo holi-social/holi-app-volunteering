@@ -124,7 +124,7 @@ const serverConfigMock: ServerConfig = {
   fake: false,
   volunteeringDB: {
     hostname: 'fakehost',
-    port: '1234',
+    port: 1234,
     database: 'volunteering',
     password: 'secret',
     username: 'admin',
@@ -133,7 +133,7 @@ const serverConfigMock: ServerConfig = {
   geoAPIEndpointUrl: 'fakeUrl',
 }
 
-const noCacheServerConfig = {
+const noCacheServerConfig: ServerConfig = {
   cacheEnabled: false,
   voltastics: voltasticsConfigMock,
   imageProxyBaseUrl: serverConfigMock.imageProxyBaseUrl,
@@ -143,7 +143,7 @@ const noCacheServerConfig = {
   fake: false,
   volunteeringDB: {
     hostname: 'fakehost',
-    port: '1234',
+    port: 1234,
     database: 'volunteering',
     password: 'secret',
     username: 'admin',
