@@ -277,11 +277,8 @@ export const createPostgresClient = (config: ServerConfig): postgres.Sql => {
     database: config.volunteeringDB.database,
     username: config.volunteeringDB.username,
     password: config.volunteeringDB.password,
-    debug: (connection, query, params, types) => {
-      logger.debug(JSON.stringify({ connection, query, params, types }))
-    },
     connect_timeout: 5,
-    idle_timeout: 60, // automatically close idle connections after 5 minutes to avoid ECONNRESET issue, see https://www.npmjs.com/package/postgres#connection-details
+    idle_timeout: 60 * 5, // automatically close idle connections after 5 minutes to avoid ECONNRESET issue, see https://www.npmjs.com/package/postgres#connection-details
     max_lifetime: 60 * 30, // close connections after 30 minutes in a controlled manner to avoid ECONNRESET issue
     connection: {
       application_name: 'volunteering-api-service',
