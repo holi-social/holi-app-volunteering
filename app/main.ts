@@ -1,5 +1,5 @@
 import { logger, LogSeverity } from './logging.ts'
-import { startServer } from './server.ts'
+import { createPostgresClient, startServer } from './server.ts'
 import { Sentry } from './deps.ts'
 import { environment, serverConfigFromEnv } from './config.ts'
 
@@ -21,4 +21,31 @@ if (!sentryDSN) {
   })
 }
 
-startServer(serverConfigFromEnv())
+const config = serverConfigFromEnv()
+const sql = createPostgresClient(config)
+const server = startServer(config, sql)
+
+for (const signal of ['SIGINT', 'SIGTERM'] as Deno.Signal[]) {
+  Deno.addSignalListener(signal, async () => {
+    const shutdownTimeout = new Promise((_resolve, _reject) => {
+      setTimeout(() => {
+        console.log('Shutdown timeout reached - forcing exit')
+        Deno.exit(1)
+      }, 5000)
+    })
+    const shutdown = async (): Promise<void> => {
+      logger.info(`Received signal ${signal}`)
+      logger.info('Shutting down server')
+      await server.shutdown()
+      await server.finished
+      logger.info('Shutting down Postgres client')
+      await sql.end()
+      logger.info('Done shutting done. Bye :)')
+      Deno.exit()
+    }
+    await Promise.race([
+      shutdown(),
+      shutdownTimeout,
+    ])
+  })
+}

@@ -1,5 +1,5 @@
-import type { QueryObjectResult } from './deps.ts'
-import { Client, GraphQLError, Sentry } from './deps.ts'
+import { postgres } from './deps.ts'
+import { GraphQLError, Sentry } from './deps.ts'
 import { GeoAPIClient } from './geo_api_client.ts'
 import {
   Engagement,
@@ -20,7 +20,7 @@ import { BadRequestError } from './server.ts'
 
 export type VolunteeringDBConfig = {
   hostname: string
-  port: string
+  port: number
   database: string
   username: string
   password: string
@@ -312,9 +312,9 @@ const toEngagement = (imageProxyBaseUrl: string, row: VolunteeringDBRow): Engage
 }
 
 const extractTotalResultCount = (
-  queryResult: QueryObjectResult<VolunteeringDBRow>,
+  queryResult: VolunteeringDBRow[],
 ) =>
-  (queryResult.rows.length ? Number(queryResult.rows[0].total_results) : queryResult.rowCount) ??
+  (queryResult.length ? Number(queryResult[0].total_results) : queryResult.length) ??
     0
 
 const ERROR_CODE_NOT_FOUND = 'NOT_FOUND'
@@ -328,16 +328,16 @@ export interface VolunteeringDB {
 }
 
 export class PostgresVolunteeringDB implements VolunteeringDB {
-  private client: Client
+  private readonly sql: postgres.Sql
   private readonly imageProxyBaseUrl: string
   private geoAPIClient: GeoAPIClient
 
   constructor(
-    client: Client,
+    sql: postgres.Sql,
     imageProxyBaseUrl: string,
     geoAPIClient: GeoAPIClient,
   ) {
-    this.client = client
+    this.sql = sql
     this.imageProxyBaseUrl = imageProxyBaseUrl
     this.geoAPIClient = geoAPIClient
   }
@@ -346,17 +346,17 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     return await Sentry.startSpan(
       { name: 'VolunteeringDB.engagement' },
       async () => {
-        const result = await this.client.queryObject<VolunteeringDBRow>`
+        const result = await this.sql<VolunteeringDBRow[]>`
           SELECT * FROM volunteering_voltastics_with_classification
           WHERE id = ${id}`
-        if (result.rows.length < 1) {
+        if (result.length < 1) {
           return Promise.reject(
             new GraphQLError('Not found', {
               extensions: { 'code': ERROR_CODE_NOT_FOUND },
             }),
           )
         } else {
-          const row = result.rows[0]
+          const row = result[0]
           return toEngagement(this.imageProxyBaseUrl, row)
         }
       },
@@ -381,7 +381,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           }
           throw reason
         })
-        const recos = result.rows.map((row) =>
+        const recos = result.map((row) =>
           addQueryMatchInfo(row, toEngagement(this.imageProxyBaseUrl, row), topics, skills)
         )
         return Promise.resolve({
@@ -410,7 +410,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           }
           throw reason
         })
-        const recos = result.rows.map((row) => toEngagementRecommendation(this.imageProxyBaseUrl, row, topics, skills))
+        const recos = result.map((row) => toEngagementRecommendation(this.imageProxyBaseUrl, row, topics, skills))
         return Promise.resolve({
           totalResults: extractTotalResultCount(result),
           data: recos,
@@ -425,7 +425,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     topics: string[],
     skills: string[],
     geolocationId?: string,
-  ): Promise<QueryObjectResult<VolunteeringDBRow>> {
+  ): Promise<VolunteeringDBRow[]> {
     const geolocationCoordinates = geolocationId
       ? await this.geoAPIClient.resolveCoordinates(geolocationId)
         .catch((error) => {
@@ -475,7 +475,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     limit: number,
     topics: string[],
     skills: string[],
-  ): Promise<QueryObjectResult<VolunteeringDBRow>> {
+  ): Promise<VolunteeringDBRow[]> {
     return await Sentry.startSpan(
       { name: 'VolunteeringDB.queryRecosBasedOnTopicsAndSkills', op: 'db.query' },
       async () => {
@@ -483,7 +483,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           `queryRecosBasedOnTopicsAndSkills ${JSON.stringify({ offset, limit, topics, skills })}`,
         )
         const queryVector = JSON.stringify(queryEmbeddingVector(topics, skills))
-        return await this.client.queryObject<VolunteeringDBRow>`
+        return await this.sql<VolunteeringDBRow[]>`
           SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity, count(*) OVER () as total_results
           FROM volunteering_voltastics_with_classification
           ORDER BY cosine_similarity DESC
@@ -499,7 +499,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     topics: string[],
     skills: string[],
     geolocationCoordinates: GeolocationCoordinates,
-  ): Promise<QueryObjectResult<VolunteeringDBRow>> {
+  ): Promise<VolunteeringDBRow[]> {
     return await Sentry.startSpan(
       { name: 'VolunteeringDB.queryRecosBasedOnTopicsSkillsAndLocation', op: 'db.query' },
       async () => {
@@ -520,7 +520,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         // - Database stores in GPS-Coordinates (SRID 4326)
         // - In order to calculate a distance in meters, a geometry needs to be projected by transforming using
         //   ST_Transform(geom, 3857) where we use the SRID 3857 for Pseudo-Mercator
-        return await this.client.queryObject<VolunteeringDBRow>`
+        return await this.sql<VolunteeringDBRow[]>`
           WITH calculations AS (
             SELECT *,
                   1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
@@ -547,7 +547,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     offset: number,
     limit: number,
     geolocationCoordinates: GeolocationCoordinates,
-  ): Promise<QueryObjectResult<VolunteeringDBRow>> {
+  ): Promise<VolunteeringDBRow[]> {
     return await Sentry.startSpan(
       { name: 'VolunteeringDB.queryRecosBasedOnLocation', op: 'db.query' },
       async () => {
@@ -555,12 +555,12 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           `queryRecosBasedOnLocation ${JSON.stringify({ offset, limit, geolocationCoordinates })}`,
         )
         const { lat, lon } = geolocationCoordinates
-        return await this.client.queryObject<VolunteeringDBRow>`
+        return await this.sql<VolunteeringDBRow[]>`
           SELECT *,
                  count(*) OVER() AS total_results,
                  ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
           FROM volunteering_voltastics_with_classification
-          ORDER BY distance_in_meters ASC
+          ORDER BY distance_in_meters
           OFFSET ${offset}
           LIMIT ${limit};
         `
@@ -633,7 +633,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     const result = await Sentry.startSpan(
       { name: 'VolunteeringDB.querySimilarRecommendations.queryVolunteeringOpportunityById', op: 'db.query' },
       () => {
-        return this.client.queryObject<SimilarEmbeddingRow>`
+        return this.sql<SimilarEmbeddingRow[]>`
           SELECT latitude, longitude, e.embedding_array
           FROM volunteering_voltastics_similar_embeddings e
           JOIN volunteering_voltastics_with_classification v
@@ -643,12 +643,12 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
       },
     )
 
-    if (!result.rows.length) {
+    if (!result.length) {
       logger.warn(`No similarity recommendations found for ID ${id}`)
       return Promise.resolve([])
     }
 
-    const row = result.rows[0]
+    const row = result[0]
     const lat = row.latitude ?? null
     const lon = row.longitude ?? null
     const embedding = JSON.parse(row.embedding_array) as number[]
@@ -666,7 +666,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         name: 'VolunteeringDB.querySimilarRecommendations.queryRecosWithoutLatLon',
         op: 'db.query',
       }, () => {
-        return this.client.queryObject<VolunteeringDBRow>`
+        return this.sql<VolunteeringDBRow[]>`
           WITH similarity_calculations AS (
             SELECT v.*,
                    1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity
@@ -681,7 +681,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           OFFSET ${offset} LIMIT ${limit};
         `
       })
-      return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row))
+      return recosResult.map((row) => toEngagement(this.imageProxyBaseUrl, row))
     } else {
       logger.debug(
         `querySimilarRecommendations.queryRecosWithLatLon ${JSON.stringify({ id, offset, limit })}`,
@@ -690,7 +690,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         name: 'VolunteeringDB.querySimilarRecommendations.queryRecosWithLatLon',
         op: 'db.query',
       }, () => {
-        return this.client.queryObject<VolunteeringDBRow>`
+        return this.sql<VolunteeringDBRow[]>`
           WITH similarity_calculations AS (
             SELECT v.*,
                    1 - (e.embedding_array <=> ${queryVectorString}) AS cosine_similarity,
@@ -712,7 +712,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           LIMIT ${limit};
         `
       })
-      return recosResult.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row))
+      return recosResult.map((row) => toEngagement(this.imageProxyBaseUrl, row))
     }
   }
 
@@ -738,7 +738,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         // - Unset bits in `binary_embedding` for terms that are not part of the query using bitwise AND => If at least one set bit remains, it matches the query (checked by comparing to empty bit string, as it's too long for integer conversion)
         // - Filter by geolocation by checking if coordinates are inside the given geolocation's GeoJSON geometry
         // - Sort results using cosine_similarity
-        const result = await this.client.queryObject<VolunteeringDBRow>`
+        const result: VolunteeringDBRow[] = await this.sql<VolunteeringDBRow[]>`
           WITH vector_matches AS (
             SELECT
               *,
@@ -750,7 +750,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
               END AS matches_query,
               CASE
                 WHEN ${!!geometry}
-                THEN ST_Contains(ST_GeomFromGeoJSON(${geometry}), location_gps)
+                THEN ST_Contains(ST_GeomFromGeoJSON(${geometry ? JSON.stringify(geometry) : ''}), location_gps)
                 ELSE true
               END AS matches_location
             FROM volunteering_voltastics_with_classification
@@ -766,7 +766,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
 
         return {
           totalResults: extractTotalResultCount(result),
-          data: result.rows.map((row) => toEngagement(this.imageProxyBaseUrl, row)),
+          data: result.map((row) => toEngagement(this.imageProxyBaseUrl, row)),
         }
       },
     )

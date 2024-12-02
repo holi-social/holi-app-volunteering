@@ -84,7 +84,7 @@ export const serverConfigFromEnv = (): ServerConfig => {
         String,
         fake ? 'dummy value' : undefined,
       ),
-      port: requiredEnv('DB_PORT', String, fake ? '31337' : undefined),
+      port: parseInt(requiredEnv('DB_PORT', String, fake ? '31337' : undefined)),
       database: requiredEnv(
         'DB_NAME',
         String,
