@@ -54,9 +54,17 @@ resource "google_cloud_run_service" "volunteering_api" {
         ports {
           container_port = 8004
         }
+        startup_probe {
+          http_get {
+            path = "/ready"
+          }
+          timeout_seconds   = 10
+          period_seconds    = 10
+          failure_threshold = 6
+        }
         liveness_probe {
           http_get {
-            path = "/liveness"
+            path = "/health"
           }
           timeout_seconds = 10
           period_seconds  = 60
