@@ -262,10 +262,9 @@ const isDbConnectionAlive = async (client: Client): Promise<Response> => {
     if (e instanceof DeadlineError) {
       console.error(`Liveness check timed out after ${timeout} ms`)
       return new Response(null, { status: 503 })
-    } else {
-      console.error('Liveness check failed, reason: ', e)
-      return new Response(null, { status: 500 })
     }
+    console.error('Liveness check failed, reason: ', e)
+    return new Response(null, { status: 500 })
   }
 }
 
@@ -300,8 +299,9 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
     hostname: '0.0.0.0',
     handler: (req: Request) => {
       const url = new URL(req.url)
-      if (url.pathname.startsWith('/liveness')) return isDbConnectionAlive(client)
-      else return graphQLServer.handleRequest(req)
+      const pathname = url.pathname
+      if (pathname.startsWith('/health') || pathname.startsWith('/ready')) return isDbConnectionAlive(client)
+      return graphQLServer.handleRequest(req)
     },
     onListen({ port, hostname }) {
       logger.info(
@@ -309,7 +309,7 @@ export const startServer = (config: ServerConfig): Deno.HttpServer<Deno.NetAddr>
       )
       if (config.fake) {
         logger.info(
-          `Server is serving fake data due to FAKE env var set to true`,
+          'Server is serving fake data due to FAKE env var set to true',
         )
       }
     },
