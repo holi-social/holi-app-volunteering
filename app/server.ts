@@ -299,7 +299,7 @@ export const startServer = (config: ServerConfig, sql: postgres.Sql): Deno.HttpS
     handler: (req: Request) => {
       const url = new URL(req.url)
       const pathname = url.pathname
-      if (pathname.startsWith('/health') || pathname.startsWith('/ready')) return isDbConnectionAlive(client)
+      if (pathname.startsWith('/health') || pathname.startsWith('/ready')) return isDbConnectionAlive(sql)
       return graphQLServer.handleRequest(req)
     },
     onListen({ port, hostname }) {
