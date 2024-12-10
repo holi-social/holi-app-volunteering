@@ -11,7 +11,28 @@ default:
 variables:
   API_DOMAIN_PATH: '$CI_PROJECT_DIR/api_domain'
 
+stages:
+  - test
+  - build
+  - deploy
+  - deploy_production
+
 # job templates
+
+.rule_templates:
+  only_main:
+    - if: $CI_COMMIT_BRANCH == 'main'
+      when: on_success
+  only_review:
+    - if: $CI_COMMIT_BRANCH =~ /^main$|^noenv\/.*/
+      when: never
+    - if: $CI_COMMIT_BRANCH
+      when: on_success
+  manually_review:
+    - if: $CI_COMMIT_BRANCH =~ /^main$|^noenv\/.*/
+      when: never
+    - if: $CI_COMMIT_BRANCH
+      when: on_success
 
 .deploy:
   image:
@@ -26,7 +47,6 @@ variables:
       - 'terraform/environments/terraform-*.log' # separate log for every step/command
       - $API_DOMAIN_PATH
     name: '${CI_JOB_NAME}_${CI_JOB_ID}'
-    #when: on_failure
     expire_in: 1 week
   script:
     - terraform/environments/scripts/create-or-update-env.sh "$ENVIRONMENT_ID" "$CI_COMMIT_SHA"
@@ -73,6 +93,7 @@ include:
 build_docker:
   needs: ['cache_lint_test']
   image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/docker:27'
+  stage: build
   services:
     - name: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/docker:27-dind'
       alias: 'docker'
@@ -91,26 +112,25 @@ build_docker:
 review_deploy:
   extends: .deploy
   needs: ['build_docker']
+  stage: deploy
   environment:
     name: review/$CI_COMMIT_REF_SLUG
     url: https://$CI_ENVIRONMENT_SLUG.volunteering.apis.holi.social
     on_stop: review_destroy
     auto_stop_in: 1 week
-  except:
-    - main
-    - production
-    - /^noenv\/.*/
+  rules:
+    - !reference [.rule_templates, only_review]
 
 review_smoketest:
   extends: .smoketest
   needs: ['review_deploy']
-  except:
-    - main
-    - production
-    - /^noenv\/.*/
+  stage: deploy
+  rules:
+    - !reference [.rule_templates, only_review]
 
 review_destroy:
   needs: ['review_deploy']
+  stage: deploy
   image:
     name: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/hashicorp/terraform:1.9.8'
     # default entrypoint is terraform command, but we want to run shell scripts
@@ -135,13 +155,9 @@ review_destroy:
     - git clone "$CI_REPOSITORY_URL" main-clone
     - cd main-clone
     - terraform/environments/scripts/destroy-env.sh "$CI_ENVIRONMENT_SLUG"
-  # can't use rules here: https://gitlab.com/gitlab-org/gitlab/-/issues/34077
-  when: manual
   allow_failure: true
-  except:
-    - main
-    - production
-    - /^noenv\/.*/
+  rules:
+    - !reference [.rule_templates, manually_review]
   resource_group: $ENVIRONMENT_ID # never execute terraform in parallel on the same environment
   interruptible: false
 
@@ -150,35 +166,38 @@ review_destroy:
 staging_deploy:
   extends: .deploy
   needs: ['build_docker']
+  stage: deploy
   environment:
     name: staging
     deployment_tier: staging
     url: https://staging.volunteering.apis.holi.social
   variables:
     ENVIRONMENT_ID: staging
-  only:
-    - main
+  rules:
+    - !reference [.rule_templates, only_main]
 
 staging_smoketest:
   extends: .smoketest
   needs: ['staging_deploy']
-  only:
-    - main
+  rules:
+    - !reference [.rule_templates, only_main]
 
 staging_trigger_unified-api_redeployment:
   needs: ['staging_smoketest']
+  stage: deploy
   trigger:
     project: 'app/holi-unified-api'
     branch: 'main'
-  only:
-    - main
+  rules:
+    - !reference [.rule_templates, only_main]
   resource_group: unified-api-staging
 
 ## production environment
 
 production_deploy:
   extends: .deploy
-  needs: ['build_docker']
+  needs: ['staging_smoketest']
+  stage: deploy_production
   allow_failure: false
   environment:
     name: production
@@ -186,20 +205,22 @@ production_deploy:
     url: https://production.volunteering.apis.holi.social
   variables:
     ENVIRONMENT_ID: production
-  only:
-    - production
+  rules:
+    - !reference [.rule_templates, only_main]
 
 production_smoketest:
   extends: .smoketest
   needs: ['production_deploy']
-  only:
-    - production
+  stage: deploy_production
+  rules:
+    - !reference [.rule_templates, only_main]
 
 production_trigger_unified-api_redeployment:
   needs: ['production_smoketest']
+  stage: deploy_production
   trigger:
     project: 'app/holi-unified-api'
     branch: 'production'
-  only:
-    - production
+  rules:
+    - !reference [.rule_templates, only_main]
   resource_group: unified-api-production
