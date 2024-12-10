@@ -179,6 +179,7 @@ staging_deploy:
 staging_smoketest:
   extends: .smoketest
   needs: ['staging_deploy']
+  stage: deploy
   rules:
     - !reference [.rule_templates, only_main]
 
