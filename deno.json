@@ -5,7 +5,7 @@
       "fmt": "deno fmt",
       "fmt:check": "deno fmt --check",
       "test": "deno test --allow-import ",
-      "updateDeps": "deno cache --allow-import --lock=deno.lock --lock-write app/deps.ts app/dev_deps.ts",
+      "updateDeps": "deno cache --allow-import --lock=deno.lock app/deps.ts app/dev_deps.ts",
       "install": "deno cache --allow-import --reload --lock=deno.lock app/deps.ts app/dev_deps.ts",
       "cache": "deno cache --allow-import app/main.ts",
       "dev": "deno run --allow-import --allow-net --allow-env --lock=deno.lock --cached-only --watch app/main.ts",
