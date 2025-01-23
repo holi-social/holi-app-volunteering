@@ -32,7 +32,7 @@ stages:
     - if: $CI_COMMIT_BRANCH =~ /^main$|^noenv\/.*/
       when: never
     - if: $CI_COMMIT_BRANCH
-      when: on_success
+      when: manual
 
 .deploy:
   image:
