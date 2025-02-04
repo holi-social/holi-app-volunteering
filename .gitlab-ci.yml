@@ -69,7 +69,7 @@ stages:
 ## common steps
 
 cache_lint_test:
-  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:2.1.8'
+  image: 'europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:2.1.9'
   stage: 'test'
   script:
     - deno cache --allow-import --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
