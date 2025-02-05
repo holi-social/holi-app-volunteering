@@ -1,6 +1,6 @@
 default:
   before_script:
-    - set -ex
+    - set -e
     - env
   interruptible: true
   tags:
