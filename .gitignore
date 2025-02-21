@@ -1,3 +1,4 @@
 .envrc.local
 coverage
 terraform*.log
+/.gitlab-ci-local
