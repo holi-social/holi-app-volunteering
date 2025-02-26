@@ -1,5 +1,4 @@
-import { postgres } from './deps.ts'
-import { GraphQLError, Sentry } from './deps.ts'
+import { GraphQLError, postgres, Sentry } from './deps.ts'
 import { GeoAPIClient } from './geo_api_client.ts'
 import {
   Engagement,
@@ -136,6 +135,65 @@ const SKILLS_VECTOR_INDICES = new Map<string, number>([
   ['writing-translation', 49],
 ])
 
+const TOPICS_V2_VECTOR_INDICES = new Map<string, number>([
+  ['animal-welfare', 0],
+  ['arts-culture', 1],
+  ['climate-environment', 2],
+  ['democracy-politics', 3],
+  ['disability-inclusion', 4],
+  ['disaster-relief', 5],
+  ['elderly-care', 6],
+  ['family-kids', 7],
+  ['food-hunger-relief', 8],
+  ['gender-equality', 9],
+  ['housing', 10],
+  ['human-rights', 11],
+  ['lgbtqia-plus', 12],
+  ['lifestyle-consumption', 13],
+  ['literacy-education', 14],
+  ['mental-physical-health', 15],
+  ['migration-refugees', 16],
+  ['mobility-transport', 17],
+  ['other', 18],
+  ['peace-security', 19],
+  ['poverty-homelessness', 20],
+  ['sports-recreation', 21],
+  ['technology-innovation', 22],
+  ['youth-development', 23],
+])
+
+const SKILLS_V2_VECTOR_INDICES = new Map<string, number>([
+  ['administration', 0],
+  ['animal-care', 1],
+  ['arts-crafts', 2],
+  ['building-handicraft', 3],
+  ['childcare', 4],
+  ['community-organizing', 5],
+  ['creativity-design', 6],
+  ['driving', 7],
+  ['emergency-care', 8],
+  ['event-planning', 9],
+  ['finances-taxes', 10],
+  ['food-service', 11],
+  ['fundraising', 12],
+  ['gardening-conservation', 13],
+  ['intercultural-competence', 14],
+  ['it-technology', 15],
+  ['legal-assistance', 16],
+  ['management-strategy', 17],
+  ['marketing-communications', 18],
+  ['moderation-facilitation', 19],
+  ['music-performance', 20],
+  ['nursing-caregiving', 21],
+  ['other', 22],
+  ['religious-spiritual-care', 23],
+  ['research-analysis', 24],
+  ['sales-distribution', 25],
+  ['team-leadership', 26],
+  ['translation', 27],
+  ['tutoring-coaching', 28],
+])
+
 const TOPICS_VECTOR_INDICES_REVERSE = new Map<number, string>(
   Array.from(TOPICS_VECTOR_INDICES.entries()).map((
     [key, index],
@@ -150,6 +208,21 @@ const SKILLS_VECTOR_INDICES_REVERSE = new Map<number, string>(
 
 const EMBEDDING_DIMENSIONS = TOPICS_VECTOR_INDICES.size +
   SKILLS_VECTOR_INDICES.size
+
+const TOPICS_V2_VECTOR_INDICES_REVERSE = new Map<number, string>(
+  Array.from(TOPICS_V2_VECTOR_INDICES.entries()).map((
+    [key, index],
+  ) => [index, key]),
+)
+
+const SKILLS_V2_VECTOR_INDICES_REVERSE = new Map<number, string>(
+  Array.from(SKILLS_V2_VECTOR_INDICES.entries()).map((
+    [key, index],
+  ) => [index, key]),
+)
+
+const EMBEDDING_V2_DIMENSIONS = TOPICS_V2_VECTOR_INDICES.size +
+  SKILLS_V2_VECTOR_INDICES.size
 
 /** When annotating search results with matches, embedding values below these thresholds are not considered a match.
  * Should be aligned with the precomputed binary_embedding.
@@ -170,6 +243,23 @@ const queryEmbeddingVector = (topics: string[], skills: string[]): number[] => {
     if (SKILLS_VECTOR_INDICES.has(skill)) {
       queryVector[
         TOPICS_VECTOR_INDICES.size + SKILLS_VECTOR_INDICES.get(skill)!
+      ] = 1.0
+    }
+  }
+  return queryVector
+}
+
+const queryEmbeddingVectorV2 = (topics: string[], skills: string[]): number[] => {
+  const queryVector: number[] = Array(EMBEDDING_V2_DIMENSIONS).fill(0.0)
+  for (const topic of topics) {
+    if (TOPICS_V2_VECTOR_INDICES.has(topic)) {
+      queryVector[TOPICS_V2_VECTOR_INDICES.get(topic)!] = 1.0
+    }
+  }
+  for (const skill of skills) {
+    if (SKILLS_V2_VECTOR_INDICES.has(skill)) {
+      queryVector[
+        TOPICS_V2_VECTOR_INDICES.size + SKILLS_V2_VECTOR_INDICES.get(skill)!
       ] = 1.0
     }
   }
@@ -204,27 +294,33 @@ const sortMatches = (
  * @param embedding
  * @param queriedTopics
  * @param queriedSkills
+ * @param version
  */
 const decodeMatchesFromEmbedding = (
   embedding: number[],
   queriedTopics: string[],
   queriedSkills: string[],
+  version: TopicsSkillsVersion,
 ): { topics: string[]; skills: string[] } => {
-  if (embedding.length != EMBEDDING_DIMENSIONS) {
+  const skillsOffset = version == 'v1' ? TOPICS_VECTOR_INDICES.size : TOPICS_V2_VECTOR_INDICES.size
+  const topics_indices_reverse = version == 'v1' ? TOPICS_VECTOR_INDICES_REVERSE : TOPICS_V2_VECTOR_INDICES_REVERSE
+  const skills_indices_reverse = version == 'v1' ? SKILLS_VECTOR_INDICES_REVERSE : SKILLS_V2_VECTOR_INDICES_REVERSE
+  const expectedEmbeddingDimension = version == 'v1' ? EMBEDDING_DIMENSIONS : EMBEDDING_V2_DIMENSIONS
+
+  if (embedding.length != expectedEmbeddingDimension) {
     logger.warn(
-      `Received embedding of dimension ${embedding.length}, expected ${EMBEDDING_DIMENSIONS}`,
+      `Received embedding of dimension ${embedding.length}, expected ${expectedEmbeddingDimension}`,
     )
   }
-  const skillsOffset = TOPICS_VECTOR_INDICES.size
   const matchedTopicsWithConfidence = embedding
     .map((confidence, index): [string, number] | null => {
-      return index < skillsOffset ? [TOPICS_VECTOR_INDICES_REVERSE.get(index)!, confidence] : null
+      return index < skillsOffset ? [topics_indices_reverse.get(index)!, confidence] : null
     })
     .filter((matchWithConfidence) => matchWithConfidence != null)
     .filter((matchWithConfidence) => matchWithConfidence[1] >= MATCH_TOPIC_CONFIDENCE_THRESHOLD)
   const matchedSkillsWithConfidence = embedding
     .map((confidence, index): [string, number] | null => {
-      return index >= skillsOffset ? [SKILLS_VECTOR_INDICES_REVERSE.get(index - skillsOffset)!, confidence] : null
+      return index >= skillsOffset ? [skills_indices_reverse.get(index - skillsOffset)!, confidence] : null
     })
     .filter((matchWithConfidence) => matchWithConfidence != null)
     .filter((matchWithConfidence) => matchWithConfidence[1] >= MATCH_SKILL_CONFIDENCE_THRESHOLD)
@@ -248,22 +344,6 @@ export const exportedForTesting = {
   SKILLS_VECTOR_INDICES,
 }
 
-const addQueryMatchInfo = (
-  row: VolunteeringDBRow,
-  engagement: Engagement,
-  queriedTopics: string[],
-  queriedSkills: string[],
-) => {
-  const embedding = JSON.parse(row.embedding_array) as number[]
-  const { topics, skills } = decodeMatchesFromEmbedding(embedding, queriedTopics, queriedSkills)
-  return {
-    ...engagement,
-    matchedTopics: topics,
-    matchedSkills: skills,
-    matchedGeoLocationDistanceInMeters: row.distance_in_meters,
-  }
-}
-
 const toEngagementRecommendation = (
   imageProxyBaseUrl: string,
   row: VolunteeringDBRow,
@@ -271,18 +351,42 @@ const toEngagementRecommendation = (
   queriedSkills: string[],
 ): EngagementReco => {
   const embedding = JSON.parse(row.embedding_array) as number[]
-  const { topics, skills } = decodeMatchesFromEmbedding(embedding, queriedTopics, queriedSkills)
+  const { topics, skills } = decodeMatchesFromEmbedding(
+    embedding,
+    queriedTopics,
+    queriedSkills,
+    'v1',
+  )
+  const { topics: topicsV2, skills: skillsV2 } = decodeMatchesFromEmbedding(
+    embedding,
+    queriedTopics,
+    queriedSkills,
+    'v2',
+  )
   return {
     engagement: toEngagement(imageProxyBaseUrl, row),
     matchedTopics: topics,
     matchedSkills: skills,
+    matchedTopicsV2: topicsV2,
+    matchedSkillsV2: skillsV2,
     matchedGeoLocationDistanceInMeters: row.distance_in_meters,
   }
 }
 
 const toEngagement = (imageProxyBaseUrl: string, row: VolunteeringDBRow): Engagement => {
   const embedding = JSON.parse(row.embedding_array) as number[]
-  const { topics, skills } = decodeMatchesFromEmbedding(embedding, [], [])
+  const { topics, skills } = decodeMatchesFromEmbedding(
+    embedding,
+    [],
+    [],
+    'v1',
+  )
+  const { topics: topicsV2, skills: skillsV2 } = decodeMatchesFromEmbedding(
+    embedding,
+    [],
+    [],
+    'v2',
+  )
   return {
     id: '' + row.id,
     title: row.title,
@@ -291,7 +395,6 @@ const toEngagement = (imageProxyBaseUrl: string, row: VolunteeringDBRow): Engage
     imageUrl: row.image &&
       `${imageProxyBaseUrl}/crop:0:0/resize:auto:1024/plain/` +
         encodeURIComponent(row.image),
-    imageUrlOriginal: row.image,
     source: row.source,
     categories: safeJsonParse(
       row.uses,
@@ -308,6 +411,8 @@ const toEngagement = (imageProxyBaseUrl: string, row: VolunteeringDBRow): Engage
     longitude: row.longitude,
     topics: topics,
     skills: skills,
+    topicsV2,
+    skillsV2,
   }
 }
 
@@ -319,11 +424,12 @@ const extractTotalResultCount = (
 
 const ERROR_CODE_NOT_FOUND = 'NOT_FOUND'
 
+export type TopicsSkillsVersion = 'v1' | 'v2'
+
 export interface VolunteeringDB {
   engagement(params: EngagementParameters): Promise<EngagementResponse>
-  engagementRecommendations(params: EngagementRecosParameters): Promise<EngagementsResponse>
-  engagementRecos(params: EngagementRecosParameters): Promise<EngagementRecosResponse>
-  filteredEngagements(params: FilteredEngagementsParameters): Promise<EngagementsResponse>
+  engagementRecos(version: TopicsSkillsVersion, params: EngagementRecosParameters): Promise<EngagementRecosResponse>
+  filteredEngagements(version: TopicsSkillsVersion, params: FilteredEngagementsParameters): Promise<EngagementsResponse>
   similarRecommendations(params: SimilarRecommendationsParameters): Promise<EngagementsResponse>
 }
 
@@ -363,46 +469,19 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     )
   }
 
-  async engagementRecommendations(
-    { offset, limit, topics, skills, geolocationId }: EngagementRecosParameters,
-  ): Promise<EngagementsResponse> {
-    return await Sentry.startSpan(
-      { name: 'VolunteeringDB.engagementRecommendations' },
-      async () => {
-        const result = await this.queryRecos(
-          offset < 0 ? 0 : offset,
-          limit > MAX_LIMIT || limit < 1 ? DEFAULT_LIMIT : limit,
-          topics,
-          skills,
-          geolocationId,
-        ).catch((reason) => {
-          if (!BadRequestError.isBadRequest(reason)) {
-            logger.error('Error retrieving recommendations. Reason: ', reason)
-          }
-          throw reason
-        })
-        const recos = result.map((row) =>
-          addQueryMatchInfo(row, toEngagement(this.imageProxyBaseUrl, row), topics, skills)
-        )
-        return Promise.resolve({
-          totalResults: extractTotalResultCount(result),
-          data: recos,
-        })
-      },
-    )
-  }
-
   async engagementRecos(
+    version: TopicsSkillsVersion,
     { offset, limit, topics, skills, geolocationId }: EngagementRecosParameters,
   ): Promise<EngagementRecosResponse> {
     return await Sentry.startSpan(
-      { name: 'VolunteeringDB.engagementRecos' },
+      { name: version == 'v1' ? 'VolunteeringDB.engagementRecos' : 'VolunteeringDB.engagementRecosV2' },
       async () => {
         const result = await this.queryRecos(
           offset < 0 ? 0 : offset,
           limit > MAX_LIMIT || limit < 1 ? DEFAULT_LIMIT : limit,
           topics,
           skills,
+          version,
           geolocationId,
         ).catch((reason: Error) => {
           if (!BadRequestError.isBadRequest(reason)) {
@@ -424,6 +503,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     limit: number,
     topics: string[],
     skills: string[],
+    version: TopicsSkillsVersion,
     geolocationId?: string,
   ): Promise<VolunteeringDBRow[]> {
     const geolocationCoordinates = geolocationId
@@ -447,6 +527,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         topics,
         skills,
         geolocationCoordinates,
+        version,
       )
     } else if (geolocationCoordinates) {
       return this.queryRecosBasedOnLocation(
@@ -460,6 +541,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         limit,
         topics,
         skills,
+        version,
       )
     } else {
       return Promise.reject(
@@ -475,6 +557,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     limit: number,
     topics: string[],
     skills: string[],
+    version: TopicsSkillsVersion,
   ): Promise<VolunteeringDBRow[]> {
     return await Sentry.startSpan(
       { name: 'VolunteeringDB.queryRecosBasedOnTopicsAndSkills', op: 'db.query' },
@@ -482,9 +565,13 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         logger.debug(
           `queryRecosBasedOnTopicsAndSkills ${JSON.stringify({ offset, limit, topics, skills })}`,
         )
-        const queryVector = JSON.stringify(queryEmbeddingVector(topics, skills))
+        const queryVector = version == 'v1'
+          ? queryEmbeddingVector(topics, skills)
+          : queryEmbeddingVectorV2(topics, skills)
+        const queryVectorJson = JSON.stringify(queryVector)
+        const embeddingColumn = version == 'v1' ? 'embedding_array' : 'embedding_array_v2'
         return await this.sql<VolunteeringDBRow[]>`
-          SELECT *, 1 - (embedding_array <=> ${queryVector}) AS cosine_similarity, count(*) OVER () as total_results
+          SELECT *, 1 - (${embeddingColumn} <=> ${queryVectorJson}) AS cosine_similarity, count(*) OVER () as total_results
           FROM volunteering_voltastics_with_classification
           ORDER BY cosine_similarity DESC
           OFFSET ${offset} LIMIT ${limit}
@@ -499,6 +586,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     topics: string[],
     skills: string[],
     geolocationCoordinates: GeolocationCoordinates,
+    version: TopicsSkillsVersion,
   ): Promise<VolunteeringDBRow[]> {
     return await Sentry.startSpan(
       { name: 'VolunteeringDB.queryRecosBasedOnTopicsSkillsAndLocation', op: 'db.query' },
@@ -511,8 +599,12 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         const rankingWeightCosineSimilarity = 0.7 // Weight for cosine similarity
         const rankingWeightDistance = 0.3 // Weight for proximity
         const maxDistanceInMeters = 50_000 // in meters (e.g., 50 km)
-        const queryVector = JSON.stringify(queryEmbeddingVector(topics, skills))
+        const queryVector = version == 'v1'
+          ? queryEmbeddingVector(topics, skills)
+          : queryEmbeddingVectorV2(topics, skills)
+        const queryVectorJson = JSON.stringify(queryVector)
         const { lat, lon } = geolocationCoordinates
+        const embedding_column = version == 'v1' ? 'embedding_array' : 'embedding_array_v2'
 
         // Useful knowledge
         // - PostGIS uses lon, lat (NOT lat, lon)
@@ -523,7 +615,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         return await this.sql<VolunteeringDBRow[]>`
           WITH calculations AS (
             SELECT *,
-                  1 - (embedding_array <=> ${queryVector}) AS cosine_similarity,
+                  1 - (${embedding_column} <=> ${queryVectorJson}) AS cosine_similarity,
                   ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
             FROM volunteering_voltastics_with_classification
             WHERE longitude IS NOT NULL AND latitude IS NOT NULL
@@ -569,6 +661,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
   }
 
   async filteredEngagements(
+    version: TopicsSkillsVersion,
     { offset, limit, topics, skills, geolocationId }: FilteredEngagementsParameters,
   ): Promise<EngagementsResponse> {
     const geometry: GeolocationGeometry | undefined = geolocationId
@@ -593,6 +686,7 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
       skills,
       offset < 0 ? 0 : offset,
       limit > MAX_LIMIT || limit < 1 ? DEFAULT_LIMIT : limit,
+      version,
       geometry,
     )
   }
@@ -721,17 +815,22 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
     skills: string[],
     offset: number,
     limit: number,
+    version: TopicsSkillsVersion,
     geometry?: GeolocationGeometry,
   ): Promise<EngagementsResponse> {
     return await Sentry.startSpan(
       { name: 'VolunteeringDB.queryFilteredEngagements', op: 'db.query' },
       async () => {
-        const queryVector = queryEmbeddingVector(topics, skills)
-        const queryVectorString = JSON.stringify(queryVector)
+        const queryVector = version == 'v1'
+          ? queryEmbeddingVector(topics, skills)
+          : queryEmbeddingVectorV2(topics, skills)
+        const queryVectorJson = JSON.stringify(queryVector)
+        const embeddingColumn = version == 'v1' ? 'embedding_array' : 'embedding_array_v2'
+        const binaryEmbeddingColumn = version == 'v1' ? 'binary_embedding' : 'binary_embedding_v2'
         const nonEmptyQueryVector = topics.length + skills.length > 0
         const binaryQueryVector = queryVector.map((value) => value > 0 ? '1' : '0')
           .join('')
-        const emptyBinaryQueryVector = '0'.repeat(EMBEDDING_DIMENSIONS)
+        const emptyBinaryQueryVector = '0'.repeat(version == 'v1' ? EMBEDDING_DIMENSIONS : EMBEDDING_V2_DIMENSIONS)
 
         // Filtering engagements:
         // - Precomputed `binary_embedding` is a bit string marking matching topics and skills
@@ -742,10 +841,10 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           WITH vector_matches AS (
             SELECT
               *,
-              1 - (embedding_array <=> ${queryVectorString}) AS cosine_similarity,
+              1 - (${embeddingColumn} <=> ${queryVectorJson}) AS cosine_similarity,
               CASE
                 WHEN ${nonEmptyQueryVector}
-                THEN (binary_embedding & ${binaryQueryVector}) > ${emptyBinaryQueryVector}
+                THEN (${binaryEmbeddingColumn} & ${binaryQueryVector}) > ${emptyBinaryQueryVector}
                 ELSE true
               END AS matches_query,
               CASE
