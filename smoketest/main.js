@@ -28,19 +28,21 @@ function forQuery(query, checkFunction) {
 // Define your smoketest(s) here.
 export default () => {
   forQuery(
-    `engagementRecosV2(offset:0, limit:10, topics:["animal-welfare"]) {
-    data {
-      engagement {
-        id
-        title
-        description
-        topicsV2
-        skillsV2
+    `{
+      engagementRecosV2(offset:0, limit:10, topics:["animal-welfare"]) {
+        data {
+          engagement {
+            id
+            title
+            description
+            topicsV2
+            skillsV2
+          }
+          matchedTopics
+          matchedSkills
+        }
       }
-      matchedTopics
-      matchedSkills
-    }
-  }`,
+    }`,
     (response) => {
       check(response, {
         'is status 200': (r) => r.status === 200,
