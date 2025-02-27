@@ -571,13 +571,22 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           ? queryEmbeddingVector(topics, skills)
           : queryEmbeddingVectorV2(topics, skills)
         const queryVectorJson = JSON.stringify(queryVector)
-        const embeddingColumn = version == 'v1' ? 'embedding_array' : 'embedding_array_v2'
-        return await this.sql<VolunteeringDBRow[]>`
-          SELECT *, 1 - (${embeddingColumn} <=> ${queryVectorJson}) AS cosine_similarity, count(*) OVER () as total_results
-          FROM volunteering_voltastics_with_classification
-          ORDER BY cosine_similarity DESC
-          OFFSET ${offset} LIMIT ${limit}
-        `
+        switch (version) {
+          case 'v1':
+            return await this.sql<VolunteeringDBRow[]>`
+              SELECT *, 1 - (embedding_array <=> ${queryVectorJson}) AS cosine_similarity, count(*) OVER () as total_results
+              FROM volunteering_voltastics_with_classification
+              ORDER BY cosine_similarity DESC
+              OFFSET ${offset} LIMIT ${limit}
+            `
+          case 'v2':
+            return await this.sql<VolunteeringDBRow[]>`
+              SELECT *, 1 - (embedding_array_v2 <=> ${queryVectorJson}) AS cosine_similarity, count(*) OVER () as total_results
+              FROM volunteering_voltastics_with_classification
+              ORDER BY cosine_similarity DESC
+              OFFSET ${offset} LIMIT ${limit}
+            `
+        }
       },
     )
   }
@@ -606,33 +615,54 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           : queryEmbeddingVectorV2(topics, skills)
         const queryVectorJson = JSON.stringify(queryVector)
         const { lat, lon } = geolocationCoordinates
-        const embedding_column = version == 'v1' ? 'embedding_array' : 'embedding_array_v2'
-
         // Useful knowledge
         // - PostGIS uses lon, lat (NOT lat, lon)
         // - <#> uses index scans if used in an ORDER BY clause, ST_Distance does not
         // - Database stores in GPS-Coordinates (SRID 4326)
         // - In order to calculate a distance in meters, a geometry needs to be projected by transforming using
         //   ST_Transform(geom, 3857) where we use the SRID 3857 for Pseudo-Mercator
-        return await this.sql<VolunteeringDBRow[]>`
-          WITH calculations AS (
-            SELECT *,
-                  1 - (${embedding_column} <=> ${queryVectorJson}) AS cosine_similarity,
-                  ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
-            FROM volunteering_voltastics_with_classification
-            WHERE longitude IS NOT NULL AND latitude IS NOT NULL
-          ), scored AS (
-            SELECT *,
-                  (${rankingWeightCosineSimilarity} * cosine_similarity) + 
-                  (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxDistanceInMeters})) / ${maxDistanceInMeters}) AS weighted_score
-            FROM calculations
-          )
-          SELECT *, count(*) OVER() AS total_results
-          FROM scored
-          ORDER BY weighted_score DESC
-          OFFSET ${offset}
-          LIMIT ${limit};
-        `
+        switch (version) {
+          case 'v1':
+            return await this.sql<VolunteeringDBRow[]>`
+              WITH calculations AS (
+                SELECT *,
+                     1 - (embedding_array <=> ${queryVectorJson}) AS cosine_similarity,
+                     ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
+                FROM volunteering_voltastics_with_classification
+                WHERE longitude IS NOT NULL
+                AND latitude IS NOT NULL
+              ), scored AS (
+                SELECT *,
+                    (${rankingWeightCosineSimilarity} * cosine_similarity) +
+                    (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxDistanceInMeters})) / ${maxDistanceInMeters}) AS weighted_score
+                FROM calculations
+              )
+              SELECT *, count(*) OVER () AS total_results
+              FROM scored
+              ORDER BY weighted_score DESC
+              OFFSET ${offset} LIMIT ${limit};
+            `
+          case 'v2':
+            return await this.sql<VolunteeringDBRow[]>`
+              WITH calculations AS (
+                SELECT *,
+                     1 - (embedding_array_v2 <=> ${queryVectorJson}) AS cosine_similarity,
+                     ST_Transform(location_gps, 3857) <#> ST_Transform(ST_SetSRID(ST_MakePoint(${lon.toString()}, ${lat.toString()}), 4326), 3857) AS distance_in_meters
+                FROM volunteering_voltastics_with_classification
+                WHERE longitude IS NOT NULL
+                AND latitude IS NOT NULL
+              ), scored AS (
+                SELECT *,
+                    (${rankingWeightCosineSimilarity} * cosine_similarity) +
+                    (${rankingWeightDistance} * (1 - LEAST(distance_in_meters, ${maxDistanceInMeters})) / ${maxDistanceInMeters}) AS weighted_score
+                FROM calculations
+              )
+              SELECT *, count(*) OVER () AS total_results
+              FROM scored
+              ORDER BY weighted_score DESC
+              OFFSET ${offset} LIMIT ${limit};
+            `
+        }
       },
     )
   }
@@ -827,8 +857,6 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
           ? queryEmbeddingVector(topics, skills)
           : queryEmbeddingVectorV2(topics, skills)
         const queryVectorJson = JSON.stringify(queryVector)
-        const embeddingColumn = version == 'v1' ? 'embedding_array' : 'embedding_array_v2'
-        const binaryEmbeddingColumn = version == 'v1' ? 'binary_embedding' : 'binary_embedding_v2'
         const nonEmptyQueryVector = topics.length + skills.length > 0
         const binaryQueryVector = queryVector.map((value) => value > 0 ? '1' : '0')
           .join('')
@@ -839,32 +867,63 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         // - Unset bits in `binary_embedding` for terms that are not part of the query using bitwise AND => If at least one set bit remains, it matches the query (checked by comparing to empty bit string, as it's too long for integer conversion)
         // - Filter by geolocation by checking if coordinates are inside the given geolocation's GeoJSON geometry
         // - Sort results using cosine_similarity
-        const result: VolunteeringDBRow[] = await this.sql<VolunteeringDBRow[]>`
-          WITH vector_matches AS (
-            SELECT
-              *,
-              1 - (${embeddingColumn} <=> ${queryVectorJson}) AS cosine_similarity,
-              CASE
-                WHEN ${nonEmptyQueryVector}
-                THEN (${binaryEmbeddingColumn} & ${binaryQueryVector}) > ${emptyBinaryQueryVector}
-                ELSE true
-              END AS matches_query,
-              CASE
-                WHEN ${!!geometry}
-                THEN ST_Contains(ST_GeomFromGeoJSON(${geometry ? JSON.stringify(geometry) : ''}), location_gps)
-                ELSE true
-              END AS matches_location
-            FROM volunteering_voltastics_with_classification
-            ORDER BY cosine_similarity DESC
-          )
-          SELECT *, count(*) OVER() AS total_results
-          FROM vector_matches
-          WHERE matches_query
-          AND matches_location
-          OFFSET ${offset}
-          LIMIT ${limit};
-        `
-
+        let result: VolunteeringDBRow[]
+        switch (version) {
+          case 'v1':
+            result = await this.sql<VolunteeringDBRow[]>`
+              WITH vector_matches AS (
+                SELECT
+                  *,
+                  1 - (embedding_array <=> ${queryVectorJson}) AS cosine_similarity,
+                  CASE
+                    WHEN ${nonEmptyQueryVector}
+                    THEN (binary_embedding & ${binaryQueryVector}) > ${emptyBinaryQueryVector}
+                    ELSE true
+                  END AS matches_query,
+                  CASE
+                    WHEN ${!!geometry}
+                    THEN ST_Contains(ST_GeomFromGeoJSON(${geometry ? JSON.stringify(geometry) : ''}), location_gps)
+                    ELSE true
+                  END AS matches_location
+                FROM volunteering_voltastics_with_classification
+                ORDER BY cosine_similarity DESC
+              )
+              SELECT *, count(*) OVER() AS total_results
+              FROM vector_matches
+              WHERE matches_query
+              AND matches_location
+              OFFSET ${offset}
+              LIMIT ${limit};
+            `
+            break
+          case 'v2':
+            result = await this.sql<VolunteeringDBRow[]>`
+              WITH vector_matches AS (
+                SELECT
+                  *,
+                  1 - (embedding_array_v2 <=> ${queryVectorJson}) AS cosine_similarity,
+                  CASE
+                    WHEN ${nonEmptyQueryVector}
+                    THEN (binary_embedding_v2 & ${binaryQueryVector}) > ${emptyBinaryQueryVector}
+                    ELSE true
+                  END AS matches_query,
+                  CASE
+                    WHEN ${!!geometry}
+                    THEN ST_Contains(ST_GeomFromGeoJSON(${geometry ? JSON.stringify(geometry) : ''}), location_gps)
+                    ELSE true
+                  END AS matches_location
+                FROM volunteering_voltastics_with_classification
+                ORDER BY cosine_similarity DESC
+              )
+              SELECT *, count(*) OVER() AS total_results
+              FROM vector_matches
+              WHERE matches_query
+              AND matches_location
+              OFFSET ${offset}
+              LIMIT ${limit};
+            `
+            break
+        }
         return {
           totalResults: extractTotalResultCount(result),
           data: result.map((row) => toEngagement(this.imageProxyBaseUrl, row)),
