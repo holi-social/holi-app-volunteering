@@ -233,6 +233,15 @@ const MATCH_SKILL_CONFIDENCE_THRESHOLD = 0.8
 const MAX_LIMIT = 100
 const DEFAULT_LIMIT = 10
 
+const DEFAULT_RECO_TOPICS_V2 = [
+  'human-rights',
+  'animal-welfare',
+  'arts-culture',
+  'literacy-education',
+  'mental-physical-health',
+  'democracy-politics',
+]
+
 const queryEmbeddingVector = (topics: string[], skills: string[]): number[] => {
   const queryVector: number[] = Array(EMBEDDING_DIMENSIONS).fill(0.0)
   for (const topic of topics) {
@@ -532,16 +541,35 @@ export class PostgresVolunteeringDB implements VolunteeringDB {
         version,
       )
     } else if (geolocationCoordinates) {
-      return this.queryRecosBasedOnLocation(
-        offset,
-        limit,
-        geolocationCoordinates,
-      )
+      if (version === 'v2') {
+        return this.queryRecosBasedOnTopicsSkillsAndLocation(
+          offset,
+          limit,
+          DEFAULT_RECO_TOPICS_V2,
+          skills,
+          geolocationCoordinates,
+          version,
+        )
+      } else {
+        return this.queryRecosBasedOnLocation(
+          offset,
+          limit,
+          geolocationCoordinates,
+        )
+      }
     } else if (topics.length > 0 || skills.length > 0) {
       return this.queryRecosBasedOnTopicsAndSkills(
         offset,
         limit,
         topics,
+        skills,
+        version,
+      )
+    } else if (version === 'v2') {
+      return this.queryRecosBasedOnTopicsAndSkills(
+        offset,
+        limit,
+        DEFAULT_RECO_TOPICS_V2,
         skills,
         version,
       )

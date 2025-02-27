@@ -606,6 +606,36 @@ describe('VolunteeringDB', () => {
         },
       )
     })
+    it('falls back to default topics if only a geolocation is given in V2', () => {
+      withMockedDependencies([dbFixtures.row1])(
+        async (volunteeringDB, _geoAPIClient) => {
+          const result = await volunteeringDB.engagementRecos('v2', {
+            limit: 10,
+            offset: 0,
+            topics: [],
+            skills: [],
+            geolocationId: 'mock-geolocation-id',
+          })
+          assertEquals(result.totalResults, 1)
+          assertEquals(result.data.length, 1)
+        },
+      )
+    })
+    it('falls back to default topics if no topics, skills or geolocation is given in V2', () => {
+      withMockedDependencies([dbFixtures.row1])(
+        async (volunteeringDB, _geoAPIClient) => {
+          const result = await volunteeringDB.engagementRecos('v2', {
+            limit: 10,
+            offset: 0,
+            topics: [],
+            skills: [],
+            geolocationId: 'mock-geolocation-id',
+          })
+          assertEquals(result.totalResults, 1)
+          assertEquals(result.data.length, 1)
+        },
+      )
+    })
   })
 
   describe('filterEngagements', () => {

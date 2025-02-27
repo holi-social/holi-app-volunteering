@@ -29,7 +29,7 @@ function forQuery(query, checkFunction) {
 export default () => {
   forQuery(
     `{
-      engagementRecosV2(offset:0, limit:10, topics:["animal-welfare"]) {
+      engagementRecosV2(offset:0, limit:10) {
         data {
           engagement {
             id
