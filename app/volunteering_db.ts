@@ -40,6 +40,7 @@ export type VolunteeringDBRow = {
   latitude?: number
   longitude?: number
   embedding_array: string // JSON containing `number[]`
+  embedding_array_v2: string // JSON containing `number[]`
   cosine_similarity: number
   distance_in_meters: number
   total_results: number
@@ -338,10 +339,13 @@ const decodeMatchesFromEmbedding = (
 
 export const exportedForTesting = {
   queryEmbeddingVector,
+  queryEmbeddingVectorV2,
   decodeMatchesFromEmbedding,
   sortMatches,
   TOPICS_VECTOR_INDICES,
   SKILLS_VECTOR_INDICES,
+  TOPICS_V2_VECTOR_INDICES,
+  SKILLS_V2_VECTOR_INDICES,
 }
 
 const toEngagementRecommendation = (
@@ -350,15 +354,14 @@ const toEngagementRecommendation = (
   queriedTopics: string[],
   queriedSkills: string[],
 ): EngagementReco => {
-  const embedding = JSON.parse(row.embedding_array) as number[]
   const { topics, skills } = decodeMatchesFromEmbedding(
-    embedding,
+    JSON.parse(row.embedding_array) as number[],
     queriedTopics,
     queriedSkills,
     'v1',
   )
   const { topics: topicsV2, skills: skillsV2 } = decodeMatchesFromEmbedding(
-    embedding,
+    JSON.parse(row.embedding_array_v2) as number[],
     queriedTopics,
     queriedSkills,
     'v2',
@@ -374,15 +377,14 @@ const toEngagementRecommendation = (
 }
 
 const toEngagement = (imageProxyBaseUrl: string, row: VolunteeringDBRow): Engagement => {
-  const embedding = JSON.parse(row.embedding_array) as number[]
   const { topics, skills } = decodeMatchesFromEmbedding(
-    embedding,
+    JSON.parse(row.embedding_array) as number[],
     [],
     [],
     'v1',
   )
   const { topics: topicsV2, skills: skillsV2 } = decodeMatchesFromEmbedding(
-    embedding,
+    JSON.parse(row.embedding_array_v2) as number[],
     [],
     [],
     'v2',
