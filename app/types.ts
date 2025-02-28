@@ -8,7 +8,11 @@ export type Engagement = {
   title: string
   description: string
   url: string
+  // HOLI-4384 imageUrl uses imageProxy-prepended URL for fixing old app versions
   imageUrl?: string
+  // HOLI-4384 imageUrlOriginal allows app/web-side implementation of optimized image size fetching
+  // can be removed once all app versions are updated
+  imageUrlOriginal?: string
   source: string
   categories: string[]
   organizer?: Organizer
@@ -18,12 +22,14 @@ export type Engagement = {
 
   topics: string[]
   skills: string[]
-  topicsV2: string[]
-  skillsV2: string[]
 
   matchedTopics?: string[]
   matchedSkills?: string[]
   matchedGeoLocationDistanceInMeters?: number
+}
+
+export type Category = {
+  name: string
 }
 
 export type EngagementResponse = Engagement | null
@@ -41,10 +47,9 @@ export type SimilarRecommendationsParameters = {
 
 export type EngagementReco = {
   engagement: Engagement
+
   matchedTopics?: string[]
   matchedSkills?: string[]
-  matchedTopicsV2?: string[]
-  matchedSkillsV2?: string[]
   matchedGeoLocationDistanceInMeters?: number
 }
 
@@ -52,6 +57,15 @@ export type EngagementRecosResponse = {
   totalResults: number
   data: EngagementReco[]
 }
+
+export type EngagementOpportunitiesParameters = {
+  limit: number
+  offset: number
+  location?: PlaceDetails
+  category?: string
+}
+
+export type CategoriesResponse = { data: Category[] }
 
 export type EngagementParameters = {
   id: string
@@ -73,6 +87,11 @@ export type EngagementRecosParameters = {
   geolocationId?: string
 }
 
+export type PlaceDetails = {
+  name: string
+  geolocation: GeolocationGeoJSON
+}
+
 export type GeolocationGeometry = {
   type: string
   coordinates: number[] | number[][] | number[][][] | number[][][][]
@@ -86,6 +105,11 @@ export type GeolocationCoordinates = {
 export type GeolocationProperties = {
   formatted: string
 } & GeolocationCoordinates
+
+export type GeolocationGeoJSON = {
+  properties: GeolocationProperties
+  geometry: GeolocationGeometry
+}
 
 export type FilteredEngagementsParameters = {
   limit: number
