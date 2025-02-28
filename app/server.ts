@@ -1,6 +1,4 @@
 import {
-  CategoriesResponse,
-  EngagementOpportunitiesParameters,
   EngagementParameters,
   EngagementRecosParameters,
   EngagementRecosResponse,
@@ -21,7 +19,7 @@ import {
   Sentry,
   useResponseCache,
 } from './deps.ts'
-import { fetchCategories, fetchEngagementOpportunities, trackEngagementView } from './voltastics.ts'
+import { trackEngagementView } from './voltastics.ts'
 import { logger } from './logging.ts'
 import { PostgresVolunteeringDB, VolunteeringDB } from './volunteering_db.ts'
 import { GeoAPIClientImpl } from './geo_api_client.ts'
@@ -44,9 +42,7 @@ const typeDefs = `
       description: String
       url: String
       imageUrl: String
-      imageUrlOriginal: String
       source: String
-      categories: [String]! @deprecated(reason: "Use topics & skills instead. (since v1.34)")
       organizer: Organizer
       location: String
       latitude: Float
@@ -55,12 +51,22 @@ const typeDefs = `
       """
       An array of topic slugs matching the engagement. Ordered by confidence DESC (typically, may be subject to change). 
       """
-      topics: [String]
+      topics: [String] @deprecated(reason: "Use topicsV2 instead. (since v1.51)")
       
       """
       An array of skill slugs matching the engagement. Ordered by confidence DESC (typically, may be subject to change).
       """
-      skills: [String]
+      skills: [String] @deprecated(reason: "Use skillsV2 instead. (since v1.51)")
+
+      """
+      An array of topic V2 slugs matching the engagement. Ordered by confidence DESC (typically, may be subject to change). 
+      """
+      topicsV2: [String]
+      
+      """
+      An array of skill V2 slugs matching the engagement. Ordered by confidence DESC (typically, may be subject to change).
+      """
+      skillsV2: [String]
       
       """
       If this engagement is part of a recommendation query response, matchedTopics contains the slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
@@ -78,21 +84,12 @@ const typeDefs = `
       matchedGeoLocationDistanceInMeters: Float @deprecated(reason: "Use the identically named field in the EngagementReco type returned by the engagementRecos query instead. (since v1.34)")
     }
 
-    type Category {
-      name: String!
-    }
-
-    type CategoriesResponse {
-      data: [Category!]!
-    }
-
     type EngagementsResponse {
       totalResults: Int!
       data: [Engagement]!
     }
     
     type EngagementReco {
-    
       engagement: Engagement!
       
       """
@@ -119,24 +116,21 @@ const typeDefs = `
     scalar GeoJSON
 
     type Query {
-        # uses offset-based pagination as described in https://www.apollographql.com/docs/react/pagination/offset-based
-        engagementOpportunities(offset: Int! = 0, limit: Int! = 10, location: GeoJSON, category: String): EngagementsResponse! @deprecated(reason: "Use the engagementRecos query instead. (since v1.34)")
+        """
+        Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId" (using deprecated topics & skills V2). "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
+        """
+        engagementRecos(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementRecosResponse!  @deprecated(reason: "Use engagementRecosV2 instead. (since v1.51)")
         
         """
-        Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
+        Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId" (using topics & skills V2). "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
         """
-        engagementRecommendations(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse! @deprecated(reason: "Use the engagementRecos query instead. (since v1.34)")
-        
-        """
-        Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId". "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
-        """
-        engagementRecos(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementRecosResponse!
+        engagementRecosV2(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementRecosResponse!
         
         engagement(id: String!): Engagement
         
-        categories: CategoriesResponse! @deprecated(reason: "Not in use anymore since the introduction of the engagementRecos query (since v1.34)")
-        
-        filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
+        filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!   @deprecated(reason: "Use filteredEngagementsV2 instead. (since v1.51)")
+
+        filteredEngagementsV2(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
 
         similarRecommendations(offset: Int! = 0, limit: Int! = 10, id: String!): EngagementsResponse!
     }
@@ -151,16 +145,6 @@ const createResolvers = (
   volunteeringDB: VolunteeringDB,
 ) => ({
   Query: {
-    engagementOpportunities: (
-      // deno-lint-ignore no-explicit-any
-      _parent: any,
-      parameters: EngagementOpportunitiesParameters,
-    ): Promise<EngagementsResponse> =>
-      config.fake ? Promise.resolve({ totalResults: 0, data: [] }) : fetchEngagementOpportunities(config)(parameters),
-    categories: (
-      // deno-lint-ignore no-explicit-any
-      _parent: any,
-    ): Promise<CategoriesResponse> => config.fake ? Promise.resolve({ data: [] }) : fetchCategories(config.voltastics),
     engagement: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
@@ -174,15 +158,15 @@ const createResolvers = (
     ): Promise<EngagementsResponse> =>
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
-        : Sentry.startNewTrace(() => volunteeringDB.filteredEngagements(parameters)),
-    engagementRecommendations: (
+        : Sentry.startNewTrace(() => volunteeringDB.filteredEngagements('v1', parameters)),
+    filteredEngagementsV2: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
-      parameters: EngagementRecosParameters,
+      parameters: FilteredEngagementsParameters,
     ): Promise<EngagementsResponse> =>
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
-        : Sentry.startNewTrace(() => volunteeringDB.engagementRecommendations(parameters)),
+        : Sentry.startNewTrace(() => volunteeringDB.filteredEngagements('v2', parameters)),
     engagementRecos: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
@@ -190,7 +174,15 @@ const createResolvers = (
     ): Promise<EngagementRecosResponse> =>
       config.fake
         ? Promise.resolve({ totalResults: 0, data: [] })
-        : Sentry.startNewTrace(() => volunteeringDB.engagementRecos(parameters)),
+        : Sentry.startNewTrace(() => volunteeringDB.engagementRecos('v1', parameters)),
+    engagementRecosV2: (
+      // deno-lint-ignore no-explicit-any
+      _parent: any,
+      parameters: EngagementRecosParameters,
+    ): Promise<EngagementRecosResponse> =>
+      config.fake
+        ? Promise.resolve({ totalResults: 0, data: [] })
+        : Sentry.startNewTrace(() => volunteeringDB.engagementRecos('v2', parameters)),
     similarRecommendations: (
       // deno-lint-ignore no-explicit-any
       _parent: any,
@@ -230,12 +222,11 @@ export const createGraphQLServer = (config: ServerConfig, volunteeringDB: Volunt
       useResponseCache({
         session: () => null, // global cache, shared by all users
         ttlPerSchemaCoordinate: {
-          'Query.engagementOpportunities': config.cacheTtlMsVoltastics,
           'Query.engagement': config.cacheTtlMsVoltastics,
-          'Query.categories': config.cacheTtlMsVoltastics,
           'Query.filteredEngagements': config.cacheTtlMsDB,
-          'Query.engagementRecommendations': config.cacheTtlMsDB,
+          'Query.filteredEngagementsV2': config.cacheTtlMsDB,
           'Query.engagementRecos': config.cacheTtlMsDB,
+          'Query.engagementRecosV2': config.cacheTtlMsDB,
           'Query.similarRecommendations': config.cacheTtlMsDB,
         },
       }),
