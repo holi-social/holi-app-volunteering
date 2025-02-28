@@ -1,6 +1,7 @@
 export { createSchema, createYoga } from 'npm:graphql-yoga@5.7.0'
 export { useResponseCache } from 'npm:@graphql-yoga/plugin-response-cache@3.9.0'
 export { GraphQLError } from 'npm:graphql@16.8.1'
+export * as turf from 'npm:@turf/turf@6.5.0'
 export { default as postgres } from 'npm:postgres@3.4.5'
 export { deadline, DeadlineError } from 'https://deno.land/std/async/mod.ts'
 export * as Sentry from 'https://deno.land/x/sentry/index.mjs'
