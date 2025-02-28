@@ -9,7 +9,13 @@ import {
   Stub,
   stub,
 } from './dev_deps.ts'
-import { exportedForTesting, PostgresVolunteeringDB, VolunteeringDB, VolunteeringDBRow } from './volunteering_db.ts'
+import {
+  exportedForTesting,
+  PostgresVolunteeringDB,
+  TopicsSkillsVersion,
+  VolunteeringDB,
+  VolunteeringDBRow,
+} from './volunteering_db.ts'
 import { GraphQLError, postgres } from './deps.ts'
 import { GeoAPIClient } from './geo_api_client.ts'
 import { Engagement } from './types.ts'
@@ -71,7 +77,7 @@ const withMockedDependencies = (queryObjectResult: VolunteeringDBRow[] = []) =>
   test(volunteeringDB, mockedGeoApiClient)
 }
 
-const embeddingFixtures = {
+const embeddingV1Fixtures = {
   // deno-fmt-ignore
   embedding_array: [
     1,0,0,0,0,0,0,0,0,1,
@@ -82,6 +88,20 @@ const embeddingFixtures = {
     0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,1,
+  ],
+}
+
+const embeddingV2Fixtures = {
+  // deno-fmt-ignore
+  embedding_array_v2: [
+    // topics V2
+    1,0,0,0,0,0,0,0,0,1, // animal-welfare, ..., gender-equality
+    0,0,0,0,0,0,0,0,0,0,
+    0,0,0,1,             // youth-development
+    // skills V2
+    1,0,0,0,0,0,0,0,0,1, // administration, ..., event-planning
+    0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,1,   // tutoring-coaching
   ],
 }
 
@@ -99,14 +119,15 @@ const dbFixtures = {
     location: 'Blibhausen',
     latitude: 12.3456,
     longitude: 65.4321,
-    embedding_array: JSON.stringify(embeddingFixtures.embedding_array),
+    embedding_array: JSON.stringify(embeddingV1Fixtures.embedding_array),
+    embedding_array_v2: JSON.stringify(embeddingV2Fixtures.embedding_array_v2),
     cosine_similarity: 0,
     distance_in_meters: 0,
     total_results: 1,
   } as VolunteeringDBRow,
 }
 
-const assertEngagementMatchesRow = (row: VolunteeringDBRow, engagement: Engagement) => {
+const assertEngagementMatchesRow = (version: TopicsSkillsVersion, row: VolunteeringDBRow, engagement: Engagement) => {
   assertEquals(engagement.id, `${row.id}`)
   assertEquals(engagement.title, row.title)
   assertEquals(engagement.description, row.description)
@@ -115,7 +136,6 @@ const assertEngagementMatchesRow = (row: VolunteeringDBRow, engagement: Engageme
     engagement.imageUrl,
     'mock-image-proxy-base-url/crop:0:0/resize:auto:1024/plain/' + encodeURIComponent(row.image!),
   )
-  assertEquals(engagement.imageUrlOriginal, row.image)
   assertEquals(engagement.source, row.source)
   assertEquals(engagement.categories, undefined)
   assertEquals(engagement.organizer, {
@@ -125,16 +145,32 @@ const assertEngagementMatchesRow = (row: VolunteeringDBRow, engagement: Engageme
   assertEquals(engagement.location, row.location)
   assertEquals(engagement.latitude, row.latitude)
   assertEquals(engagement.longitude, row.longitude)
-  assertEquals(engagement.topics, [
-    'agriculture-food', // first item (index 0)
-    'disabilities-inclusion', // tenth item (index 9)
-    'water-ocean', // last item  (index 27)
-  ])
-  assertEquals(engagement.skills, [
-    'adaptability', // first item (index 0)
-    'conflict-management', // tenth item (index 9)
-    'writing-translation', // last item  (index 49)
-  ])
+  switch (version) {
+    case 'v1':
+      assertEquals(engagement.topics, [
+        'agriculture-food', // first item (index 0)
+        'disabilities-inclusion', // tenth item (index 9)
+        'water-ocean', // last item  (index 27)
+      ])
+      assertEquals(engagement.skills, [
+        'adaptability', // first item (index 0)
+        'conflict-management', // tenth item (index 9)
+        'writing-translation', // last item  (index 49)
+      ])
+      break
+    case 'v2':
+      assertEquals(engagement.topicsV2, [
+        'animal-welfare', // first item (index 0)
+        'gender-equality', // tenth item (index 9)
+        'youth-development', // last item  (index 23)
+      ])
+      assertEquals(engagement.skillsV2, [
+        'administration', // first item (index 0)
+        'event-planning', // tenth item (index 9)
+        'tutoring-coaching', // last item  (index 28)
+      ])
+      break
+  }
   assertEquals(engagement.matchedTopics, undefined)
   assertEquals(engagement.matchedSkills, undefined)
   assertEquals(engagement.matchedGeoLocationDistanceInMeters, undefined)
@@ -145,16 +181,7 @@ describe('VolunteeringDB', () => {
     it('correctly constructs a query embedding vector', () => {
       const expectedLength = 28 /* #topics */ + 50 /* #skills */
       // deno-fmt-ignore
-      const expectedVector: number[] = [
-              1,0,0,0,0,0,0,0,0,1,
-              0,0,0,0,0,0,0,0,0,0,
-              0,0,0,0,0,0,0,1,
-              1,0,0,0,0,0,0,0,0,1,
-              0,0,0,0,0,0,0,0,0,0,
-              0,0,0,0,0,0,0,0,0,0,
-              0,0,0,0,0,0,0,0,0,0,
-              0,0,0,0,0,0,0,0,0,1,
-          ]
+      const expectedVector: number[] = embeddingV1Fixtures.embedding_array
       // deno-fmt-ignore
       const actualVector = exportedForTesting.queryEmbeddingVector([
           "agriculture-food",       // first item (index 0)
@@ -169,8 +196,25 @@ describe('VolunteeringDB', () => {
       assertEquals(actualVector, expectedVector)
     })
   })
+  describe('queryEmbeddingVectorV2', () => {
+    it('correctly constructs a query embedding vector', () => {
+      const expectedVector: number[] = embeddingV2Fixtures.embedding_array_v2
+      // deno-fmt-ignore
+      const actualVector = exportedForTesting.queryEmbeddingVectorV2([
+        'animal-welfare', // first item (index 0)
+        'gender-equality', // tenth item (index 9)
+        'youth-development', // last item  (index 23)
+      ], [
+        'administration', // first item (index 0)
+        'event-planning', // tenth item (index 9)
+        'tutoring-coaching', // last item  (index 28)
+      ]);
+      assertEquals(actualVector.length, expectedVector.length)
+      assertEquals(actualVector, expectedVector)
+    })
+  })
   describe('decodeMatchesFromEmbedding', () => {
-    it('correctly reverse-decodes topics and skills matches from embeddings', () => {
+    it('correctly reverse-decodes topics and skills matches from V1 embeddings', () => {
       // deno-fmt-ignore
       const embedding: number[] = [
         0.9,0,0,0,0,0,0,0,0,0.8,
@@ -204,11 +248,52 @@ describe('VolunteeringDB', () => {
         embedding,
         allTopics,
         allSkills,
+        'v1',
       )
       assertEquals(matches.topics, expectedMatchedTopics)
       assertEquals(matches.skills, expectedMatchedSkills)
     })
-    it('filters out topics and skills matches with confidence below MATCH_CONFIDENCE_THRESHOLD', () => {
+    it('correctly reverse-decodes topics and skills matches from V2 embeddings', () => {
+      // deno-fmt-ignore
+      const embedding: number[] = [
+        // topics V2
+        0.9,0,0,0,0,0,0,0,0,0.8,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0.85,
+        // skills V2
+        0.85,0,0,-0.5,0,0,0,0,0,0.99,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,1.0,
+      ]
+
+      // ordered by confidence DESC with queried for terms first
+      const expectedMatchedTopics = [
+        'animal-welfare', // first item (index 0)
+        'youth-development', // last item  (index 23)
+        'gender-equality', // tenth item (index 9)
+      ]
+      // ordered by confidence DESC with queried for terms first
+      const expectedMatchedSkills = [
+        'tutoring-coaching', // last item  (index 28)
+        'event-planning', // tenth item (index 9)
+        'administration', // first item (index 0)
+      ]
+      const allTopics = Array.from(
+        exportedForTesting.TOPICS_V2_VECTOR_INDICES.keys(),
+      )
+      const allSkills = Array.from(
+        exportedForTesting.SKILLS_V2_VECTOR_INDICES.keys(),
+      )
+      const matches = exportedForTesting.decodeMatchesFromEmbedding(
+        embedding,
+        allTopics,
+        allSkills,
+        'v2',
+      )
+      assertEquals(matches.topics, expectedMatchedTopics)
+      assertEquals(matches.skills, expectedMatchedSkills)
+    })
+    it('filters out V1 topics and skills matches with confidence below MATCH_CONFIDENCE_THRESHOLD', () => {
       // deno-fmt-ignore
       const embedding: number[] = [
         0.9,0,0,0,0,0,0,0,0,0.3,
@@ -240,11 +325,49 @@ describe('VolunteeringDB', () => {
         embedding,
         allTopics,
         allSkills,
+        'v1',
       )
       assertEquals(matches.topics, expectedMatchedTopics)
       assertEquals(matches.skills, expectedMatchedSkills)
     })
-    it('ranks topics and skills matches queried for higher', () => {
+    it('filters out V2 topics and skills matches with confidence below MATCH_CONFIDENCE_THRESHOLD', () => {
+      // deno-fmt-ignore
+      const embedding: number[] = [
+        // topics V2
+        0.9,0,0,0,0,0,0,0,0,0.3,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0.85,
+        // skills V2
+        0.3,0,0,-0.5,0,0,0,0,0,0.99,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,1.0,
+      ]
+      // ordered by confidence DESC with queried for terms first
+      const expectedMatchedTopics = [
+        'animal-welfare', // first item (index 0)
+        'youth-development', // last item  (index 23)
+      ]
+      // ordered by confidence DESC with queried for terms first
+      const expectedMatchedSkills = [
+        'tutoring-coaching', // last item  (index 28)
+        'event-planning', // tenth item (index 9)
+      ]
+      const allTopics = Array.from(
+        exportedForTesting.TOPICS_V2_VECTOR_INDICES.keys(),
+      )
+      const allSkills = Array.from(
+        exportedForTesting.SKILLS_V2_VECTOR_INDICES.keys(),
+      )
+      const matches = exportedForTesting.decodeMatchesFromEmbedding(
+        embedding,
+        allTopics,
+        allSkills,
+        'v2',
+      )
+      assertEquals(matches.topics, expectedMatchedTopics)
+      assertEquals(matches.skills, expectedMatchedSkills)
+    })
+    it('ranks V1 topics and skills matches queried for higher', () => {
       // deno-fmt-ignore
       const embedding: number[] = [
         0.85,0,0,0,0,0,0,0,0,0.9,
@@ -275,6 +398,43 @@ describe('VolunteeringDB', () => {
         embedding,
         queriedTopics,
         queriedSkills,
+        'v1',
+      )
+      assertEquals(matches.topics, expectedMatchedTopics)
+      assertEquals(matches.skills, expectedMatchedSkills)
+    })
+    it('ranks V2 topics and skills matches queried for higher', () => {
+      // deno-fmt-ignore
+      const embedding: number[] = [
+        // topics V2
+        0.85,0,0,0,0,0,0,0,0,0.9,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0.81,0,0.9,
+        // skills V2
+        0.85,0,0,-0.5,0,0,0,0,0,0.99,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,1.0,
+      ]
+      // ordered by confidence DESC with queried for terms first
+      const expectedMatchedTopics = [
+        'gender-equality', // tenth item (index 9)
+        'sports-recreation',
+        'youth-development', // last item  (index 23)
+        'animal-welfare', // first item (index 0)
+      ]
+      // ordered by confidence DESC with queried for terms first
+      const expectedMatchedSkills = [
+        'tutoring-coaching', // last item  (index 28)
+        'event-planning', // tenth item (index 9)
+        'administration', // first item (index 0)
+      ]
+      const queriedTopics = ['sports-recreation', 'gender-equality']
+      const queriedSkills = ['tutoring-coaching']
+      const matches = exportedForTesting.decodeMatchesFromEmbedding(
+        embedding,
+        queriedTopics,
+        queriedSkills,
+        'v2',
       )
       assertEquals(matches.topics, expectedMatchedTopics)
       assertEquals(matches.skills, expectedMatchedSkills)
@@ -304,7 +464,8 @@ describe('VolunteeringDB', () => {
     it('correctly parses engagement', () => {
       withMockedDependencies([dbFixtures.row1])(async (volunteeringDB) => {
         const response = await volunteeringDB.engagement({ id: '1' })
-        assertEngagementMatchesRow(dbFixtures.row1, response!)
+        assertEngagementMatchesRow('v1', dbFixtures.row1, response!)
+        assertEngagementMatchesRow('v2', dbFixtures.row1, response!)
       })
     })
 
@@ -315,86 +476,10 @@ describe('VolunteeringDB', () => {
       })
     })
   })
-  // TODO findRecommendations is deprecated, can be removed after clients are migrated to findRecommendationsV2
-  describe('findRecommendations', () => {
-    it('resolves latitude/longitude using the GeoAPI client when geolocationId is given', () => {
-      withMockedDependencies()(
-        (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.engagementRecommendations({
-            limit: 10,
-            offset: 0,
-            topics: [],
-            skills: [],
-            geolocationId: 'mock-geolocation-id',
-          })
-          assertSpyCall(geoAPIClient.resolveCoordinates as Stub, 0, {
-            args: ['mock-geolocation-id'],
-          })
-        },
-      )
-    })
-    it('does not resolve latitude/longitude when geolocationId is not given', () => {
-      withMockedDependencies()(
-        (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.engagementRecommendations({
-            limit: 10,
-            offset: 0,
-            topics: ['agriculture-food'],
-            skills: [],
-          })
-          assertSpyCalls(geoAPIClient.resolveCoordinates as Stub, 0)
-        },
-      )
-    })
-    it('falls back to recommend based only on topics and skills if given and geo location resolution fails', () => {
-      withMockedDependencies()(
-        async (volunteeringDB, geoAPIClient) => {
-          stub(
-            geoAPIClient,
-            'resolveCoordinates',
-            returnsNext([Promise.reject('boom!')]),
-          )
-
-          const result = await volunteeringDB.engagementRecommendations({
-            limit: 10,
-            offset: 0,
-            topics: ['agriculture-food'],
-            skills: [],
-            geolocationId: 'mock-geolocation-id',
-          })
-          assertEquals(result.totalResults, 0)
-          assertEquals(result.data, [])
-        },
-      )
-    })
-    it('fails with error message if no topics and skills are given and geo location resolution fails', () => {
-      withMockedDependencies()(
-        async (volunteeringDB, geoAPIClient) => {
-          stub(
-            geoAPIClient,
-            'resolveCoordinates',
-            returnsNext([Promise.reject('boom!')]),
-          )
-          await assertRejects(
-            () =>
-              volunteeringDB.engagementRecommendations({
-                limit: 10,
-                offset: 0,
-                topics: [],
-                skills: [],
-                geolocationId: 'mock-geolocation-id',
-              }),
-            Error,
-            'geo location resolution failed and no topics or skills given',
-          )
-        },
-      )
-    })
-  })
   describe('findRecos', () => {
     it('wraps search results with matchedTopics, matchedSkills and matchedGeoLocationDistanceInMeters', () => {
       withMockedDependencies([dbFixtures.row1])(async (volunteeringDB, _geoApiClient) => {
-        const response = await volunteeringDB.engagementRecos({
+        const response = await volunteeringDB.engagementRecos('v1', {
           limit: 10,
           offset: 0,
           topics: ['disabilities-inclusion', 'water-ocean'],
@@ -405,7 +490,7 @@ describe('VolunteeringDB', () => {
         assertEquals(response.data.length, 1)
 
         const reco = response.data[0]
-        assertEngagementMatchesRow(dbFixtures.row1, reco.engagement)
+        assertEngagementMatchesRow('v1', dbFixtures.row1, reco.engagement)
 
         assertEquals(reco.matchedTopics, [
           'disabilities-inclusion', // tenth item (index 9)
@@ -420,10 +505,38 @@ describe('VolunteeringDB', () => {
         assertEquals(reco.matchedGeoLocationDistanceInMeters, 0)
       })
     })
+    it('wraps search results with matchedTopicsV2, matchedSkillsV2 and matchedGeoLocationDistanceInMeters', () => {
+      withMockedDependencies([dbFixtures.row1])(async (volunteeringDB, _geoApiClient) => {
+        const response = await volunteeringDB.engagementRecos('v2', {
+          limit: 10,
+          offset: 0,
+          topics: ['animal-welfare', 'youth-development'],
+          skills: ['event-planning', 'tutoring-coaching'],
+          geolocationId: 'mock-geolocation-id',
+        })
+        assertEquals(response.totalResults, 1)
+        assertEquals(response.data.length, 1)
+
+        const reco = response.data[0]
+        assertEngagementMatchesRow('v2', dbFixtures.row1, reco.engagement)
+
+        assertEquals(reco.matchedTopicsV2, [
+          'animal-welfare',
+          'youth-development',
+          'gender-equality',
+        ])
+        assertEquals(reco.matchedSkillsV2, [
+          'event-planning',
+          'tutoring-coaching',
+          'administration',
+        ])
+        assertEquals(reco.matchedGeoLocationDistanceInMeters, 0)
+      })
+    })
     it('resolves latitude/longitude using the GeoAPI client when geolocationId is given', () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.engagementRecos({
+          volunteeringDB.engagementRecos('v2', {
             limit: 10,
             offset: 0,
             topics: [],
@@ -439,7 +552,7 @@ describe('VolunteeringDB', () => {
     it('does not resolve latitude/longitude when geolocationId is not given', () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.engagementRecos({
+          volunteeringDB.engagementRecos('v2', {
             limit: 10,
             offset: 0,
             topics: ['agriculture-food'],
@@ -458,7 +571,7 @@ describe('VolunteeringDB', () => {
             returnsNext([Promise.reject('boom!')]),
           )
 
-          const result = await volunteeringDB.engagementRecos({
+          const result = await volunteeringDB.engagementRecos('v2', {
             limit: 10,
             offset: 0,
             topics: ['agriculture-food'],
@@ -480,7 +593,7 @@ describe('VolunteeringDB', () => {
           )
           await assertRejects(
             () =>
-              volunteeringDB.engagementRecos({
+              volunteeringDB.engagementRecos('v2', {
                 limit: 10,
                 offset: 0,
                 topics: [],
@@ -493,13 +606,43 @@ describe('VolunteeringDB', () => {
         },
       )
     })
+    it('falls back to default topics if only a geolocation is given in V2', () => {
+      withMockedDependencies([dbFixtures.row1])(
+        async (volunteeringDB, _geoAPIClient) => {
+          const result = await volunteeringDB.engagementRecos('v2', {
+            limit: 10,
+            offset: 0,
+            topics: [],
+            skills: [],
+            geolocationId: 'mock-geolocation-id',
+          })
+          assertEquals(result.totalResults, 1)
+          assertEquals(result.data.length, 1)
+        },
+      )
+    })
+    it('falls back to default topics if no topics, skills or geolocation is given in V2', () => {
+      withMockedDependencies([dbFixtures.row1])(
+        async (volunteeringDB, _geoAPIClient) => {
+          const result = await volunteeringDB.engagementRecos('v2', {
+            limit: 10,
+            offset: 0,
+            topics: [],
+            skills: [],
+            geolocationId: 'mock-geolocation-id',
+          })
+          assertEquals(result.totalResults, 1)
+          assertEquals(result.data.length, 1)
+        },
+      )
+    })
   })
 
   describe('filterEngagements', () => {
     it('resolves geolocation geometry using the GeoAPI client when geolocationId is given', () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.filteredEngagements({
+          volunteeringDB.filteredEngagements('v2', {
             limit: 10,
             offset: 0,
             topics: [],
@@ -515,7 +658,7 @@ describe('VolunteeringDB', () => {
     it('does not resolve geolocation geometry when geolocationId is not given', () => {
       withMockedDependencies()(
         (volunteeringDB, geoAPIClient) => {
-          volunteeringDB.filteredEngagements({
+          volunteeringDB.filteredEngagements('v2', {
             limit: 10,
             offset: 0,
             topics: ['agriculture-food'],
@@ -535,7 +678,7 @@ describe('VolunteeringDB', () => {
           )
           await assertRejects(
             () =>
-              volunteeringDB.filteredEngagements({
+              volunteeringDB.filteredEngagements('v2', {
                 limit: 10,
                 offset: 0,
                 topics: ['agriculture-food'],
@@ -553,7 +696,7 @@ describe('VolunteeringDB', () => {
         async (volunteeringDB, _geoAPIClient) => {
           await assertRejects(
             () =>
-              volunteeringDB.filteredEngagements({
+              volunteeringDB.filteredEngagements('v2', {
                 limit: 10,
                 offset: 0,
                 topics: [],

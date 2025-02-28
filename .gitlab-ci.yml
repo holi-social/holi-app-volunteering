@@ -121,12 +121,13 @@ review_deploy:
   rules:
     - !reference [.rule_templates, only_review]
 
-review_smoketest:
-  extends: .smoketest
-  needs: ['review_deploy']
-  stage: deploy
-  rules:
-    - !reference [.rule_templates, only_review]
+# Review environment does not have any tables
+# review_smoketest:
+#   extends: .smoketest
+#   needs: ['review_deploy']
+#   stage: deploy
+#   rules:
+#     - !reference [.rule_templates, only_review]
 
 review_destroy:
   needs: ['review_deploy']

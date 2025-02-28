@@ -27,14 +27,32 @@ function forQuery(query, checkFunction) {
 
 // Define your smoketest(s) here.
 export default () => {
-  forQuery(`{categories{data{name}}}`, (response) => {
-    check(response, {
-      'is status 200': (r) => r.status === 200,
-    })
-    check(JSON.parse(response.body), {
-      // there can be multiple tests here, e.g.
-      //"contains topics object": (r) => typeof r.data.topics != null,
-      'contains categories': (r) => Array.isArray(r.data.categories.data) && r.data.categories.data.length > 0,
-    })
-  })
+  forQuery(
+    `{
+      engagementRecosV2(offset:0, limit:10) {
+        data {
+          engagement {
+            id
+            title
+            description
+            topicsV2
+            skillsV2
+          }
+          matchedTopics
+          matchedSkills
+        }
+      }
+    }`,
+    (response) => {
+      check(response, {
+        'is status 200': (r) => r.status === 200,
+      })
+      check(JSON.parse(response.body), {
+        // there can be multiple tests here, e.g.
+        //"contains topics object": (r) => typeof r.data.topics != null,
+        'contains recos': (r) =>
+          Array.isArray(r.data.engagementRecosV2.data) && r.data.engagementRecosV2.data.length > 0,
+      })
+    },
+  )
 }
