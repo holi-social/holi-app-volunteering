@@ -95,7 +95,7 @@ const typeDefs = `
       """
       Contains the slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
-      matchedTopics: [String]
+      matchedTopics: [String] @deprecated(reason: "Use matchedTopicsV2 instead. (since v1.51)")
       """
       Contains the V2 slugs of matched topics. The order is defined as follows: 1) topics that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
@@ -104,7 +104,7 @@ const typeDefs = `
       """
       Contains the slugs of matched skills. The order is defined as follows: 1) skills that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
-      matchedSkills: [String]
+      matchedSkills: [String] @deprecated(reason: "Use matchedSkillsV2 instead. (since v1.51)")
       """
       Contains the V2 slugs of matched skills. The order is defined as follows: 1) skills that were part of the query come first (sorted by matching confidence). 2) other topics the engagement matches (sorted by matching confidence)
       """
