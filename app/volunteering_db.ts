@@ -234,12 +234,12 @@ const MAX_LIMIT = 100
 const DEFAULT_LIMIT = 10
 
 const DEFAULT_RECO_TOPICS_V2 = [
-  'human-rights',
-  'animal-welfare',
-  'arts-culture',
-  'literacy-education',
-  'mental-physical-health',
   'democracy-politics',
+  'human-rights',
+  'climate-environment',
+  'literacy-education',
+  'arts-culture',
+  'animal-welfare',
 ]
 
 const queryEmbeddingVector = (topics: string[], skills: string[]): number[] => {
