@@ -132,15 +132,15 @@ const typeDefs = `
         """
         Retrieves a list of recommendations based on the request parameters "topics", "skills" and "geoLocationId" (using topics & skills V2). "topics" contains slugs of the "Topic" type, "skills" contains slugs of the "Skill" type, "geoLocationId" contains the ID of a location as returned by the "geo_*" queries.
         """
-        engagementRecosV2(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementRecosResponse!
+        engagementRecosV2(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementRecosResponse! @deprecated(reason: "Query engagements using typesense instead. (since v1.55)")
         
-        engagement(id: String!): Engagement
+        engagement(id: String!): Engagement @deprecated(reason: "Query engagements using typesense instead. (since v1.55)")
         
         filteredEngagements(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!   @deprecated(reason: "Use filteredEngagementsV2 instead. (since v1.51)")
 
-        filteredEngagementsV2(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse!
+        filteredEngagementsV2(offset: Int! = 0, limit: Int! = 10, topics: [String!] = [], skills: [String!] = [], geolocationId: String): EngagementsResponse! @deprecated(reason: "Query engagements using typesense instead. (since v1.55)")
 
-        similarRecommendations(offset: Int! = 0, limit: Int! = 10, id: String!): EngagementsResponse!
+        similarRecommendations(offset: Int! = 0, limit: Int! = 10, id: String!): EngagementsResponse! @deprecated(reason: "Query engagements using typesense instead. (since v1.55)")
     }
 
     type Mutation {
