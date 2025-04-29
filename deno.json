@@ -4,14 +4,14 @@
       "lint": "deno lint",
       "fmt": "deno fmt",
       "fmt:check": "deno fmt --check",
-      "test": "deno test --allow-import ",
+      "test": "deno test --allow-import --allow-env",
       "updateDeps": "deno cache --allow-import --lock=deno.lock app/deps.ts app/dev_deps.ts",
       "install": "deno cache --allow-import --reload --lock=deno.lock app/deps.ts app/dev_deps.ts",
       "cache": "deno cache --allow-import app/main.ts",
       "dev": "deno run --allow-import --allow-net --allow-env --lock=deno.lock --cached-only --watch app/main.ts",
       "start": "deno run --allow-import --allow-net --allow-env --lock=deno.lock --cached-only app/main.ts",
       "docker": "docker build -t volunteering-api . && docker run -it --init -p 8004:8004 volunteering-api",
-      "coverage": "deno test --allow-import --coverage=coverage && deno coverage coverage",
+      "coverage": "deno test --allow-import --allow-env --coverage=coverage && deno coverage coverage",
       "pre-commit": {
         "cmd": "vr fmt && vr lint && vr test",
         "gitHook": "pre-commit"

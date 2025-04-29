@@ -73,7 +73,7 @@ cache_lint_test:
     - deno cache --allow-import --reload --lock=deno.lock app/deps.ts app/dev_deps.ts
     - deno fmt --check
     - deno lint
-    - deno test --allow-import
+    - deno test --allow-import --allow-env
 
 # You can override the included template(s) by including variable overrides
 # SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
