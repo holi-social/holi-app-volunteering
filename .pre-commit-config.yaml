@@ -1,9 +1,7 @@
 repos:
-  - repo: local
+  - repo: git@gitlab.holi.team:app/holi-meta.git
+    rev: 345e2cab6704f708a946c08a9eaa1ba769c455fb
     hooks:
+      - id: scan-comments
+      - id: security-checks
       - id: gitleaks
-        name: gitleaks
-        language: system
-        entry: gitleaks protect --staged -v -c ../.gitleaks.toml
-        pass_filenames: false
-        always_run: true
