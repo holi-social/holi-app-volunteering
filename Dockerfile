@@ -1,4 +1,4 @@
-FROM europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:2.2.13
+FROM europe-north1-docker.pkg.dev/holi-shared/docker-hub-remote/denoland/deno:2.4.0
 
 # The port that your application listens to.
 EXPOSE 8004
